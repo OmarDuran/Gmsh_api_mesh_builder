@@ -77,7 +77,8 @@ void Wellbore_trajectory_3D(){
     
         TGmshWellboreBuilder wb_builder(r_wb,wb_trajectory);
         if(1){ // volume option
-            gmsh::vectorpair wb_dim_tags = wb_builder.DrawWellbore();
+//            gmsh::vectorpair wb_dim_tags = wb_builder.DrawWellbore();
+            gmsh::vectorpair wb_dim_tags = wb_builder.DrawWellboreShell();
 
             double lx = -1.0;
             double ly = -4.0;
@@ -99,48 +100,12 @@ void Wellbore_trajectory_3D(){
                 gmsh::model::occ::fuse(sector_volume, next_sector_volume, wellbore_volume, ovv);
                 sector_volume = wellbore_volume;
             }
+            if (n_volumes == 1) {
+                wellbore_volume = wb_dim_tags;
+            }
             gmsh::model::occ::cut({{3, box_tag}},wellbore_volume, ov, ovv);
         }
-        
-        if(0){ /// trying directly from wellbore shells
-            gmsh::vectorpair wb_dim_tags = wb_builder.DrawWellboreShell();
-            
-            std::vector<int> wb_shell_tags;
-            for (auto i: wb_dim_tags) {
-                wb_shell_tags.push_back(i.second);
-            }
-            
-            double lx = -1.0;
-            double ly = -4.0;
-            double lz = -2.0;
-            double lx_e = 8.0;
-            double ly_e = 8.0;
-            double lz_e = 4.0;
-            
-            std::vector<std::pair<int, int> > ov;
-            int box_tag = gmsh::model::occ::addBox(lx,ly,lz, lx_e,ly_e,lz_e);
-            gmsh::vectorpair box_dim_tag;
-            std::pair<int,int> chunk_vol;
-            chunk_vol.first = 3;
-            chunk_vol.second = box_tag;
-            box_dim_tag.push_back(chunk_vol);
-            gmsh::model::occ::remove(box_dim_tag);
-            gmsh::vectorpair entities_2d;
-//            gmsh::model::occ::synchronize();
-//            gmsh::model::getEntities(entities_2d,2);
-            std::vector<int> bc_shell;
-            for (int i = wb_dim_tags.size(); i < entities_2d.size(); i++) {
-                bc_shell.push_back(entities_2d[i].second);
-            }
-            int surface_loop = gmsh::model::occ::addSurfaceLoop(wb_shell_tags);
-            int bc_surface_loop = gmsh::model::occ::addSurfaceLoop(bc_shell);
-            std::vector<int> surface_loop_tags;
-            surface_loop_tags.push_back(bc_surface_loop);
-            surface_loop_tags.push_back(surface_loop);
-            gmsh::model::occ::addVolume(surface_loop_tags);
-            
-        }
-    }
+
     
     gmsh::model::occ::synchronize();
     

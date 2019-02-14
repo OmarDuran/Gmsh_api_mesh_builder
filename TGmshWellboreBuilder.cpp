@@ -239,10 +239,24 @@ gmsh::vectorpair TGmshWellboreBuilder::DrawWellboreShell(){
         }
     }
     
+    std::vector<int> surface_tags;
+    for (auto i : wb_shell_dim_tags) {
+        surface_tags.push_back(i.second);
+    }
+    int surface_loop = gmsh::model::occ::addSurfaceLoop(surface_tags);
+    std::vector<int> surface_loop_tags;
+    surface_loop_tags.push_back(surface_loop);
+    gmsh::vectorpair wb_dim_tags;
+    std::pair<int,int> volume_chunk;
+    int volume_tag = gmsh::model::occ::addVolume(surface_loop_tags);
+    volume_chunk.first = 3;
+    volume_chunk.second = volume_tag;
+    wb_dim_tags.push_back(volume_chunk);
+    
     
     /// Deleting ring base
     RemoveRingBase();
-    return wb_shell_dim_tags;
+    return wb_dim_tags;
     
 }
 
