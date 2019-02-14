@@ -81,6 +81,7 @@ gmsh::vectorpair TGmshWellboreBuilder::DrawWellbore(){
     {
 //        int i = 0;
         std::vector<int> surface_tags;
+        std::pair<int,int> volume_chunk;
         {
             gmsh::vectorpair ring_dim_tags_i = rings[i];
             gmsh::vectorpair ring_dim_tags_e = rings[i+1];
@@ -102,9 +103,12 @@ gmsh::vectorpair TGmshWellboreBuilder::DrawWellbore(){
                 plane_ring_dim_tags_i.push_back(ring_dim_tags_i[k].second);
                 plane_ring_dim_tags_e.push_back(ring_dim_tags_e[k].second);
             }
-            int wired_tag = gmsh::model::occ::addWire(plane_ring_dim_tags_i);
-            int plane_surface_tag = gmsh::model::occ::addSurfaceFilling(wired_tag);
-            surface_tags.push_back(plane_surface_tag);
+            int wired_tag_i = gmsh::model::occ::addWire(plane_ring_dim_tags_i);
+            int wired_tag_e = gmsh::model::occ::addWire(plane_ring_dim_tags_e);
+            int plane_surface_tag_i = gmsh::model::occ::addSurfaceFilling(wired_tag_i);
+            int plane_surface_tag_e = gmsh::model::occ::addSurfaceFilling(wired_tag_e);
+            surface_tags.push_back(plane_surface_tag_i);
+            surface_tags.push_back(plane_surface_tag_e);
             std::vector<int> axial={0,1,2,3,0};
             std::vector<int> planes={0,1,2,3};
             for (int k = 0; k < 4; k++)
@@ -123,7 +127,13 @@ gmsh::vectorpair TGmshWellboreBuilder::DrawWellbore(){
             }
  
         }
-        
+        int surface_loop = gmsh::model::occ::addSurfaceLoop(surface_tags);
+        std::vector<int> surface_loop_tags;
+        surface_loop_tags.push_back(surface_loop);
+        int volume_tag = gmsh::model::occ::addVolume(surface_loop_tags);
+        volume_chunk.first = 3;
+        volume_chunk.second = volume_tag;
+        wb_dim_tags.push_back(volume_chunk);
     }
     
     

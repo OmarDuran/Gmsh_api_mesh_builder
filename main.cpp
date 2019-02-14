@@ -42,8 +42,8 @@ void Wellbore_trajectory_3D(){
     
     
     gmsh::option::setNumber("Mesh.Algorithm", 6);
-    gmsh::option::setNumber("Mesh.CharacteristicLengthMin", 0.5);
-    gmsh::option::setNumber("Mesh.CharacteristicLengthMax", 0.5);
+    gmsh::option::setNumber("Mesh.CharacteristicLengthMin", 1.0);
+    gmsh::option::setNumber("Mesh.CharacteristicLengthMax", 1.0);
     
     {
         
@@ -78,6 +78,24 @@ void Wellbore_trajectory_3D(){
         TGmshWellboreBuilder wb_builder(r_wb,wb_trajectory);
         gmsh::vectorpair wb_dim_tags = wb_builder.DrawWellbore();
 
+        double l = 6.0;
+        int box_tag = gmsh::model::occ::addBox(-l,-l,-l, 2*l,2*l,2*l);
+        
+        std::vector<std::pair<int, int> > ov;
+        std::vector<std::pair<int, int> > wellbore_volume;
+        std::vector<std::vector<std::pair<int, int> > > ovv;
+        int n_volumes = wb_dim_tags.size();
+        std::vector<std::pair<int, int> > sector_volume;
+        sector_volume.push_back(wb_dim_tags[0]);
+        for (int i =1 ; i < n_volumes; i++) {
+            std::vector<std::pair<int, int> > next_sector_volume;
+            next_sector_volume.push_back(wb_dim_tags[i]);
+            gmsh::model::occ::fuse(sector_volume, next_sector_volume, wellbore_volume, ovv);
+            sector_volume = wellbore_volume;
+        }
+        
+        
+        gmsh::model::occ::cut({{3, box_tag}},wellbore_volume, ov, ovv);
     }
     
     gmsh::model::occ::synchronize();
