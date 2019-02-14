@@ -52,6 +52,9 @@ public:
     /// Create the wellbore solid and retun th entities dim_tag array
     gmsh::vectorpair DrawWellbore();
     
+    /// Create the wellbore shell and retun th entities dim_tag array
+    gmsh::vectorpair DrawWellboreShell();
+    
 public: //  convert later to private
     
     /// Create Ring with normal pointing in z direction

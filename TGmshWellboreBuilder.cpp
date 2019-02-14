@@ -138,8 +138,112 @@ gmsh::vectorpair TGmshWellboreBuilder::DrawWellbore(){
     
     
     /// Deleting ring base
-//    RemoveRingBase();
+    RemoveRingBase();
     return wb_dim_tags;
+}
+
+/// Create the wellbore shell and retun th entities dim_tag array
+gmsh::vectorpair TGmshWellboreBuilder::DrawWellboreShell(){
+    
+    gmsh::vectorpair wb_shell_dim_tags;
+    std::vector<gmsh::vectorpair> rings;
+    CreateRingBase();
+    
+    int n_points = m_wellbore_trajectory.size();
+    for (int i = 0; i < n_points - 1; i++) {
+        std::vector<double> p_i = m_wellbore_trajectory[i];
+        std::vector<double> p_e = m_wellbore_trajectory[i+1];
+        std::vector<double> axial_dir = {p_e[0]-p_i[0],p_e[1]-p_i[1],p_e[2]-p_i[2]};
+        normalize(axial_dir);
+        gmsh::vectorpair ring_dim_tags = CopyRingBase();
+        RotateRing(ring_dim_tags, axial_dir);
+        TranslateRing(ring_dim_tags, p_i);
+        rings.push_back(ring_dim_tags);
+    }
+    
+    
+    { /// Ending point case
+        std::vector<double> p_i = m_wellbore_trajectory[n_points-2];
+        std::vector<double> p_e = m_wellbore_trajectory[n_points-1];
+        std::vector<double> axial_dir = {p_e[0]-p_i[0],p_e[1]-p_i[1],p_e[2]-p_i[2]};
+        normalize(axial_dir);
+        gmsh::vectorpair ring_dim_tags = CopyRingBase();
+        RotateRing(ring_dim_tags, axial_dir);
+        TranslateRing(ring_dim_tags, p_e);
+        rings.push_back(ring_dim_tags);
+    }
+    
+    
+    for (int i = 0; i < n_points - 1; i++)
+    {
+        //        int i = 0;
+        
+        std::pair<int,int> shell_chunk;
+        {
+            gmsh::vectorpair ring_dim_tags_i = rings[i];
+            gmsh::vectorpair ring_dim_tags_e = rings[i+1];
+            
+            std::vector<int> axial_lines_ring_dim_tags;
+            for (int k = 1; k < 5; k++)
+            { /// Adding lines
+                int p_i = ring_dim_tags_i[k].second;
+                int p_e = ring_dim_tags_e[k].second;
+                int line_tag = gmsh::model::occ::addLine(p_i, p_e);
+                axial_lines_ring_dim_tags.push_back(line_tag);
+                
+            }
+            
+            std::vector<int> plane_ring_dim_tags_i;
+            std::vector<int> plane_ring_dim_tags_e;
+            for (int k = 5; k < 9; k++)
+            { /// Adding Plane surfaces
+                plane_ring_dim_tags_i.push_back(ring_dim_tags_i[k].second);
+                plane_ring_dim_tags_e.push_back(ring_dim_tags_e[k].second);
+            }
+            int wired_tag_i = gmsh::model::occ::addWire(plane_ring_dim_tags_i);
+            int wired_tag_e = gmsh::model::occ::addWire(plane_ring_dim_tags_e);
+            if (i == 0) {
+                int plane_surface_tag_i = gmsh::model::occ::addSurfaceFilling(wired_tag_i);
+                shell_chunk.first = 2;
+                shell_chunk.second = plane_surface_tag_i;
+                wb_shell_dim_tags.push_back(shell_chunk);
+            } else if(i == n_points - 2){
+                int plane_surface_tag_e = gmsh::model::occ::addSurfaceFilling(wired_tag_e);
+                shell_chunk.first = 2;
+                shell_chunk.second = plane_surface_tag_e;
+                wb_shell_dim_tags.push_back(shell_chunk);
+            }
+//            int plane_surface_tag_i = gmsh::model::occ::addSurfaceFilling(wired_tag_i);
+//            int plane_surface_tag_e = gmsh::model::occ::addSurfaceFilling(wired_tag_e);
+//            surface_tags.push_back(plane_surface_tag_i);
+//            surface_tags.push_back(plane_surface_tag_e);
+            std::vector<int> axial={0,1,2,3,0};
+            std::vector<int> planes={0,1,2,3};
+            for (int k = 0; k < 4; k++)
+            {
+                std::vector<int> curve_ring_dim_tags;
+                int a_i = axial[k];
+                int a_e = axial[k+1];
+                int p = planes[k];
+                curve_ring_dim_tags.push_back(axial_lines_ring_dim_tags[a_i]);
+                curve_ring_dim_tags.push_back(plane_ring_dim_tags_e[p]);
+                curve_ring_dim_tags.push_back(axial_lines_ring_dim_tags[a_e]);
+                curve_ring_dim_tags.push_back(plane_ring_dim_tags_i[p]);
+                int curve_wired_tag = gmsh::model::occ::addWire(curve_ring_dim_tags);
+                int curve_surface_tag = gmsh::model::occ::addSurfaceFilling(curve_wired_tag);
+                shell_chunk.first = 2;
+                shell_chunk.second = curve_surface_tag;
+                wb_shell_dim_tags.push_back(shell_chunk);
+            }
+            
+        }
+    }
+    
+    
+    /// Deleting ring base
+    RemoveRingBase();
+    return wb_shell_dim_tags;
+    
 }
 
 void TGmshWellboreBuilder::CreateRingBase(){

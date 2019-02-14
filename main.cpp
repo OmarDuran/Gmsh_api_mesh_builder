@@ -45,7 +45,7 @@ void Wellbore_trajectory_3D(){
     gmsh::option::setNumber("Mesh.CharacteristicLengthMin", 1.0);
     gmsh::option::setNumber("Mesh.CharacteristicLengthMax", 1.0);
     
-    {
+    {/// Functional but expensive
         
         /// wellbore radius
         REAL r_wb = 0.5;
@@ -76,26 +76,70 @@ void Wellbore_trajectory_3D(){
         wb_trajectory.push_back(p10);
     
         TGmshWellboreBuilder wb_builder(r_wb,wb_trajectory);
-        gmsh::vectorpair wb_dim_tags = wb_builder.DrawWellbore();
+        if(1){ // volume option
+            gmsh::vectorpair wb_dim_tags = wb_builder.DrawWellbore();
 
-        double l = 6.0;
-        int box_tag = gmsh::model::occ::addBox(-l,-l,-l, 2*l,2*l,2*l);
-        
-        std::vector<std::pair<int, int> > ov;
-        std::vector<std::pair<int, int> > wellbore_volume;
-        std::vector<std::vector<std::pair<int, int> > > ovv;
-        int n_volumes = wb_dim_tags.size();
-        std::vector<std::pair<int, int> > sector_volume;
-        sector_volume.push_back(wb_dim_tags[0]);
-        for (int i =1 ; i < n_volumes; i++) {
-            std::vector<std::pair<int, int> > next_sector_volume;
-            next_sector_volume.push_back(wb_dim_tags[i]);
-            gmsh::model::occ::fuse(sector_volume, next_sector_volume, wellbore_volume, ovv);
-            sector_volume = wellbore_volume;
+            double lx = -1.0;
+            double ly = -4.0;
+            double lz = -2.0;
+            double lx_e = 8.0;
+            double ly_e = 8.0;
+            double lz_e = 4.0;
+            int box_tag = gmsh::model::occ::addBox(lx,ly,lz, lx_e,ly_e,lz_e);
+            
+            std::vector<std::pair<int, int> > ov;
+            std::vector<std::pair<int, int> > wellbore_volume;
+            std::vector<std::vector<std::pair<int, int> > > ovv;
+            int n_volumes = wb_dim_tags.size();
+            std::vector<std::pair<int, int> > sector_volume;
+            sector_volume.push_back(wb_dim_tags[0]);
+            for (int i =1 ; i < n_volumes; i++) {
+                std::vector<std::pair<int, int> > next_sector_volume;
+                next_sector_volume.push_back(wb_dim_tags[i]);
+                gmsh::model::occ::fuse(sector_volume, next_sector_volume, wellbore_volume, ovv);
+                sector_volume = wellbore_volume;
+            }
+            gmsh::model::occ::cut({{3, box_tag}},wellbore_volume, ov, ovv);
         }
         
-        
-        gmsh::model::occ::cut({{3, box_tag}},wellbore_volume, ov, ovv);
+        if(0){ /// trying directly from wellbore shells
+            gmsh::vectorpair wb_dim_tags = wb_builder.DrawWellboreShell();
+            
+            std::vector<int> wb_shell_tags;
+            for (auto i: wb_dim_tags) {
+                wb_shell_tags.push_back(i.second);
+            }
+            
+            double lx = -1.0;
+            double ly = -4.0;
+            double lz = -2.0;
+            double lx_e = 8.0;
+            double ly_e = 8.0;
+            double lz_e = 4.0;
+            
+            std::vector<std::pair<int, int> > ov;
+            int box_tag = gmsh::model::occ::addBox(lx,ly,lz, lx_e,ly_e,lz_e);
+            gmsh::vectorpair box_dim_tag;
+            std::pair<int,int> chunk_vol;
+            chunk_vol.first = 3;
+            chunk_vol.second = box_tag;
+            box_dim_tag.push_back(chunk_vol);
+            gmsh::model::occ::remove(box_dim_tag);
+            gmsh::vectorpair entities_2d;
+//            gmsh::model::occ::synchronize();
+//            gmsh::model::getEntities(entities_2d,2);
+            std::vector<int> bc_shell;
+            for (int i = wb_dim_tags.size(); i < entities_2d.size(); i++) {
+                bc_shell.push_back(entities_2d[i].second);
+            }
+            int surface_loop = gmsh::model::occ::addSurfaceLoop(wb_shell_tags);
+            int bc_surface_loop = gmsh::model::occ::addSurfaceLoop(bc_shell);
+            std::vector<int> surface_loop_tags;
+            surface_loop_tags.push_back(bc_surface_loop);
+            surface_loop_tags.push_back(surface_loop);
+            gmsh::model::occ::addVolume(surface_loop_tags);
+            
+        }
     }
     
     gmsh::model::occ::synchronize();
