@@ -77,9 +77,9 @@ gmsh::vectorpair TGmshWellboreBuilder::DrawWellbore(){
     }
     
     
-//    for (int i = 0; i < n_points - 1; i++)
+    for (int i = 0; i < n_points - 1; i++)
     {
-        int i = 0;
+//        int i = 0;
         std::vector<int> surface_tags;
         {
             gmsh::vectorpair ring_dim_tags_i = rings[i];
@@ -105,26 +105,23 @@ gmsh::vectorpair TGmshWellboreBuilder::DrawWellbore(){
             int wired_tag = gmsh::model::occ::addWire(plane_ring_dim_tags_i);
             int plane_surface_tag = gmsh::model::occ::addSurfaceFilling(wired_tag);
             surface_tags.push_back(plane_surface_tag);
+            std::vector<int> axial={0,1,2,3,0};
+            std::vector<int> planes={0,1,2,3};
+            for (int k = 0; k < 4; k++)
             {
                 std::vector<int> curve_ring_dim_tags;
-                curve_ring_dim_tags.push_back(axial_lines_ring_dim_tags[0]);
-                curve_ring_dim_tags.push_back(plane_ring_dim_tags_e[0]);
-                curve_ring_dim_tags.push_back(axial_lines_ring_dim_tags[1]);
-                curve_ring_dim_tags.push_back(plane_ring_dim_tags_i[0]);
+                int a_i = axial[k];
+                int a_e = axial[k+1];
+                int p = planes[k];
+                curve_ring_dim_tags.push_back(axial_lines_ring_dim_tags[a_i]);
+                curve_ring_dim_tags.push_back(plane_ring_dim_tags_e[p]);
+                curve_ring_dim_tags.push_back(axial_lines_ring_dim_tags[a_e]);
+                curve_ring_dim_tags.push_back(plane_ring_dim_tags_i[p]);
                 int curve_wired_tag = gmsh::model::occ::addWire(curve_ring_dim_tags);
                 int curve_surface_tag = gmsh::model::occ::addSurfaceFilling(curve_wired_tag);
                 surface_tags.push_back(curve_surface_tag);
             }
-            {
-                std::vector<int> curve_ring_dim_tags;
-                curve_ring_dim_tags.push_back(axial_lines_ring_dim_tags[1]);
-                curve_ring_dim_tags.push_back(plane_ring_dim_tags_e[1]);
-                curve_ring_dim_tags.push_back(axial_lines_ring_dim_tags[1]);
-                curve_ring_dim_tags.push_back(plane_ring_dim_tags_i[1]);
-                int curve_wired_tag = gmsh::model::occ::addWire(curve_ring_dim_tags);
-                int curve_surface_tag = gmsh::model::occ::addSurfaceFilling(curve_wired_tag);
-                surface_tags.push_back(curve_surface_tag);
-            }
+ 
         }
         
     }
