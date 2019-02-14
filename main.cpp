@@ -26,7 +26,6 @@ int main()
 {
     
     Wellbore_trajectory_3D();
-    
 //    Constructive_solid_geometry();
     return 0;
 }
@@ -190,7 +189,7 @@ void Wellbore_trajectory_3D(){
 //    gmsh::model::mesh::refine();
     //    gmsh::model::mesh::setOrder(2);
     //gmsh::model::mesh::partition(4)
-    gmsh::write("geometry.msh");
+    gmsh::write("wellbore_geo.msh");
     
     
     
@@ -211,7 +210,8 @@ void Wellbore_trajectory_3D(){
     
     
     gmesh->BuildConnectivity();
-    TPZGeoMeshBluider::PrintGeometry(gmesh);
+    std::string name = "wellbore";
+    TPZGeoMeshBluider::PrintGeometry(gmesh,name);
     
     gmsh::finalize();
     
@@ -379,7 +379,8 @@ void Constructive_solid_geometry(){
     
     
     gmesh->BuildConnectivity();
-    TPZGeoMeshBluider::PrintGeometry(gmesh);
+    std::string name = "geometry";
+    TPZGeoMeshBluider::PrintGeometry(gmesh,name);
     
     gmsh::finalize();
 }
