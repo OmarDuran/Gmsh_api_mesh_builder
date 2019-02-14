@@ -49,11 +49,11 @@ public:
     /// Get the wellbore radius
     double WellRadius();
     
-    /// Create the wellbore solid and retun th entities dim_tag array
-    gmsh::vectorpair DrawWellbore();
+    /// Create the wellbore volume by sections and retun th entities dim_tag array
+    gmsh::vectorpair DrawWellboreBySections();
     
-    /// Create the wellbore shell and retun th entities dim_tag array
-    gmsh::vectorpair DrawWellboreShell();
+    /// Create the wellbore volume by shell and retun th entities dim_tag array
+    gmsh::vectorpair DrawWellboreByShell();
     
 public: //  convert later to private
     

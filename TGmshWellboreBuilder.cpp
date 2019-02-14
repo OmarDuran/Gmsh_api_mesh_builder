@@ -46,7 +46,7 @@ double TGmshWellboreBuilder::WellRadius(){
     return m_wellbore_radius;
 }
 
-gmsh::vectorpair TGmshWellboreBuilder::DrawWellbore(){
+gmsh::vectorpair TGmshWellboreBuilder::DrawWellboreBySections(){
     
     gmsh::vectorpair wb_dim_tags;
     std::vector<gmsh::vectorpair> rings;
@@ -79,7 +79,6 @@ gmsh::vectorpair TGmshWellboreBuilder::DrawWellbore(){
     
     for (int i = 0; i < n_points - 1; i++)
     {
-//        int i = 0;
         std::vector<int> surface_tags;
         std::pair<int,int> volume_chunk;
         {
@@ -143,7 +142,7 @@ gmsh::vectorpair TGmshWellboreBuilder::DrawWellbore(){
 }
 
 /// Create the wellbore shell and retun th entities dim_tag array
-gmsh::vectorpair TGmshWellboreBuilder::DrawWellboreShell(){
+gmsh::vectorpair TGmshWellboreBuilder::DrawWellboreByShell(){
     
     gmsh::vectorpair wb_shell_dim_tags;
     std::vector<gmsh::vectorpair> rings;
@@ -213,10 +212,6 @@ gmsh::vectorpair TGmshWellboreBuilder::DrawWellboreShell(){
                 shell_chunk.second = plane_surface_tag_e;
                 wb_shell_dim_tags.push_back(shell_chunk);
             }
-//            int plane_surface_tag_i = gmsh::model::occ::addSurfaceFilling(wired_tag_i);
-//            int plane_surface_tag_e = gmsh::model::occ::addSurfaceFilling(wired_tag_e);
-//            surface_tags.push_back(plane_surface_tag_i);
-//            surface_tags.push_back(plane_surface_tag_e);
             std::vector<int> axial={0,1,2,3,0};
             std::vector<int> planes={0,1,2,3};
             for (int k = 0; k < 4; k++)

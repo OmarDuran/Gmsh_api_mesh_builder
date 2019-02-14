@@ -51,16 +51,26 @@ void Wellbore_trajectory_3D(){
         REAL r_wb = 0.5;
         /// Defining the wire
         std::vector<double> p0 = {0., 0., 1.};
-        std::vector<double> p1 = {0.6283185307179586, 0.3090169943749474, 0.9510565162951535};
-        std::vector<double> p2 = {1.2566370614359172, 0.5877852522924731, 0.8090169943749475};
-        std::vector<double> p3 = {1.8849555921538759, 0.8090169943749475, 0.5877852522924731};
-        std::vector<double> p4 = {2.5132741228718345, 0.9510565162951535, 0.30901699437494745};
-        std::vector<double> p5 = {3.141592653589793, 1., 6.123233995736766e-17};
-        std::vector<double> p6 = {3.7699111843077517, 0.9510565162951536, -0.30901699437494734};
-        std::vector<double> p7 = {4.39822971502571, 0.8090169943749475, -0.587785252292473};
-        std::vector<double> p8 = {5.026548245743669, 0.5877852522924732, -0.8090169943749473};
-        std::vector<double> p9 = {5.654866776461628, 0.3090169943749475, -0.9510565162951535};
-        std::vector<double> p10 = {6.283185307179586, 1.2246467991473532e-16, -1.};
+        std::vector<double> p1 = {0.3141592653589793, 0.23344536385590542, 0.9723699203976766};
+        std::vector<double> p2 = {0.6283185307179586, 0.4539904997395468, 0.8910065241883679};
+        std::vector<double> p3 = {0.9424777960769379, 0.6494480483301835, 0.760405965600031};
+        std::vector<double> p4 = {1.2566370614359172, 0.8090169943749475, 0.587785252292473};
+        std::vector<double> p5 = {1.5707963267948966, 0.9238795325112867, 0.38268343236508984};
+        std::vector<double> p6 = {1.8849555921538759, 0.9876883405951377, 0.15643446504023115};
+        std::vector<double> p7 = {2.199114857512855, 0.996917333733128, -0.07845909572784467};
+        std::vector<double> p8 = {2.5132741228718345, 0.9510565162951535, -0.30901699437494756};
+        std::vector<double> p9 = {2.827433388230814, 0.8526401643540923, -0.5224985647159488};
+        std::vector<double> p10 = {3.141592653589793, 0.7071067811865476, -0.7071067811865475};
+        std::vector<double> p11 = {3.455751918948773, 0.5224985647159489, -0.8526401643540922};
+        std::vector<double> p12 = {3.7699111843077517, 0.30901699437494795, -0.9510565162951534};
+        std::vector<double> p13 = {4.084070449666731, 0.07845909572784462, -0.996917333733128};
+        std::vector<double> p14 = {4.39822971502571, -0.1564344650402303, -0.9876883405951378};
+        std::vector<double> p15 = {4.71238898038469, -0.38268343236508967, -0.9238795325112868};
+        std::vector<double> p16 = {5.026548245743669, -0.5877852522924734, -0.8090169943749472};
+        std::vector<double> p17 = {5.340707511102648, -0.7604059656000306, -0.6494480483301841};
+        std::vector<double> p18 = {5.654866776461628, -0.8910065241883678, -0.4539904997395469};
+        std::vector<double> p19 = {5.969026041820607, -0.9723699203976764, -0.233445363855906};
+        std::vector<double> p20 = {6.283185307179586, -1., -1.8369701987210297e-16};
         
         std::vector<std::vector<double>> wb_trajectory;
         wb_trajectory.push_back(p0);
@@ -74,17 +84,27 @@ void Wellbore_trajectory_3D(){
         wb_trajectory.push_back(p8);
         wb_trajectory.push_back(p9);
         wb_trajectory.push_back(p10);
+        wb_trajectory.push_back(p11);
+        wb_trajectory.push_back(p12);
+        wb_trajectory.push_back(p13);
+        wb_trajectory.push_back(p14);
+        wb_trajectory.push_back(p15);
+        wb_trajectory.push_back(p16);
+        wb_trajectory.push_back(p17);
+        wb_trajectory.push_back(p18);
+        wb_trajectory.push_back(p19);
+        wb_trajectory.push_back(p20);
     
         TGmshWellboreBuilder wb_builder(r_wb,wb_trajectory);
         if(1){ // volume option
-//            gmsh::vectorpair wb_dim_tags = wb_builder.DrawWellbore();
-            gmsh::vectorpair wb_dim_tags = wb_builder.DrawWellboreShell();
+//            gmsh::vectorpair wb_dim_tags = wb_builder.DrawWellboreBySections();
+            gmsh::vectorpair wb_dim_tags = wb_builder.DrawWellboreByShell();
 
-            double lx = -1.0;
-            double ly = -4.0;
+            double lx = -3.0;
+            double ly = -6.0;
             double lz = -2.0;
-            double lx_e = 8.0;
-            double ly_e = 8.0;
+            double lx_e = 10.0;
+            double ly_e = 10.0;
             double lz_e = 4.0;
             int box_tag = gmsh::model::occ::addBox(lx,ly,lz, lx_e,ly_e,lz_e);
             
@@ -106,6 +126,7 @@ void Wellbore_trajectory_3D(){
             gmsh::model::occ::cut({{3, box_tag}},wellbore_volume, ov, ovv);
         }
 
+    }
     
     gmsh::model::occ::synchronize();
     
