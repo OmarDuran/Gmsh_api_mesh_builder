@@ -15,11 +15,13 @@ TGmshWellboreBuilder::TGmshWellboreBuilder(){
 TGmshWellboreBuilder::TGmshWellboreBuilder(double & wellbore_radius, std::vector<std::vector<double>> & wellbore_trajectory){
     m_wellbore_radius       = wellbore_radius;
     m_wellbore_trajectory   = wellbore_trajectory;
+    m_characteristic_length = wellbore_radius;
 }
 
 TGmshWellboreBuilder::TGmshWellboreBuilder(const TGmshWellboreBuilder & other){
     m_wellbore_radius       = other.m_wellbore_radius;
     m_wellbore_trajectory   = other.m_wellbore_trajectory;
+    m_characteristic_length = other.m_characteristic_length;
 }
 
 const TGmshWellboreBuilder & TGmshWellboreBuilder::operator=(const TGmshWellboreBuilder & other){
@@ -28,9 +30,9 @@ const TGmshWellboreBuilder & TGmshWellboreBuilder::operator=(const TGmshWellbore
     if(&other == this){
         return *this;
     }
-    
     m_wellbore_radius       = other.m_wellbore_radius;
     m_wellbore_trajectory   = other.m_wellbore_trajectory;
+    m_characteristic_length = other.m_characteristic_length;
     return *this;
 }
 
@@ -44,6 +46,14 @@ void TGmshWellboreBuilder::SetWellRadius(double wellbore_radius){
 
 double TGmshWellboreBuilder::WellRadius(){
     return m_wellbore_radius;
+}
+
+void TGmshWellboreBuilder::SetCharacteristicLength(double characteristic_length){
+    m_characteristic_length = characteristic_length;
+}
+
+double TGmshWellboreBuilder::CharacteristicLength(){
+    return m_characteristic_length;
 }
 
 gmsh::vectorpair TGmshWellboreBuilder::DrawWellboreBySections(){
@@ -263,13 +273,13 @@ void TGmshWellboreBuilder::CreateRingBase(){
     }
     int pc_id = gmsh::model::occ::addPoint(0,0,0);
     m_base_dim_tags[0].second = pc_id;
-    int p1_id = gmsh::model::occ::addPoint(m_wellbore_radius, 0, 0);
+    int p1_id = gmsh::model::occ::addPoint(m_wellbore_radius, 0, 0, m_characteristic_length);
     m_base_dim_tags[1].second = p1_id;
-    int p2_id = gmsh::model::occ::addPoint(0, m_wellbore_radius, 0);
+    int p2_id = gmsh::model::occ::addPoint(0, m_wellbore_radius, 0, m_characteristic_length);
     m_base_dim_tags[2].second = p2_id;
-    int p3_id = gmsh::model::occ::addPoint(-m_wellbore_radius, 0, 0);
+    int p3_id = gmsh::model::occ::addPoint(-m_wellbore_radius, 0, 0, m_characteristic_length);
     m_base_dim_tags[3].second = p3_id;
-    int p4_id = gmsh::model::occ::addPoint(0, -m_wellbore_radius, 0);
+    int p4_id = gmsh::model::occ::addPoint(0, -m_wellbore_radius, 0, m_characteristic_length);
     m_base_dim_tags[4].second = p4_id;
     
     for (int i = 5; i < 9; i++) {

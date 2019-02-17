@@ -24,6 +24,9 @@ private:
     /// Stands for wellbore radius
     double m_wellbore_radius;
     
+    /// Stands for element size on wellbore
+    double m_characteristic_length;
+    
     gmsh::vectorpair m_base_dim_tags;
     
 public:
@@ -48,6 +51,12 @@ public:
     
     /// Get the wellbore radius
     double WellRadius();
+    
+    /// Set the characteristic length
+    void SetCharacteristicLength(double characteristic_length);
+    
+    /// Get the characteristic length
+    double CharacteristicLength();
     
     /// Create the wellbore volume by sections and retun th entities dim_tag array
     gmsh::vectorpair DrawWellboreBySections();
