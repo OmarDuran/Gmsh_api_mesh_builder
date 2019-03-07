@@ -16,6 +16,9 @@
 #include "TGmshWellboreBuilder.h"
 #include "TPZGmshReader.h"
 
+/// Welbore 2D with fractures intersection automatically computed
+#include "TGeometryBuilder.h"
+
 
 /// Geometry construction from: http://en.wikipedia.org/wiki/Constructive_solid_geometry
 void Constructive_solid_geometry();
@@ -23,16 +26,87 @@ void Constructive_solid_geometry();
 /// Geometry that represents a 3D wellbore inside a irregular reservoir
 void Wellbore_trajectory_3D();
 
+/// Geometry that represents a 2D wellbore inside a irregular reservoir with line fractures
+void Wellbore_2D_with_factures();
+
 /// Read a wellbore trajectory defined with xyz data.
 std::vector<std::vector<double>> ReadWellTrajectory(std::string & file_name, int n_data);
 
 int main()
 {
-    
-    Wellbore_trajectory_3D();
+    Wellbore_2D_with_factures();
+//    Wellbore_trajectory_3D();
 //    Constructive_solid_geometry();
     return 0;
 }
+
+void Wellbore_2D_with_factures(){
+    
+    gmsh::initialize(); /// Mandatory
+    gmsh::option::setNumber("General.Terminal", 1);
+    gmsh::model::add("boolean");
+    gmsh::option::setNumber("Mesh.Algorithm", 6);
+    
+    int f1pt_i = gmsh::model::occ::addPoint(0.25,0,0);
+    int f1pt_e = gmsh::model::occ::addPoint(1.5,1,0);
+
+    int f2pt_i = gmsh::model::occ::addPoint(1.0,1,0);
+    int f2pt_e = gmsh::model::occ::addPoint(1.25,-0.5,0);
+
+    int f1 = gmsh::model::occ::addLine(f1pt_i, f1pt_e);
+    int f2 = gmsh::model::occ::addLine(f2pt_i, f2pt_e);
+    
+    double x,y,z;
+    x = y = z = 0.0;
+    double r = 2.0;
+    double r_w = 0.127;
+    int circle = gmsh::model::occ::addCircle(x, y, z, r);
+    int circle_rw = gmsh::model::occ::addCircle(x, y, z, r_w);
+//    gmsh::model::occ::synchronize();
+    std::vector<int> curve_tags;
+    curve_tags.push_back(circle);
+    curve_tags.push_back(circle_rw);
+    int res_loop = gmsh::model::geo::addCurveLoop(curve_tags);
+    std::vector<int> curve_loop;
+    curve_loop.push_back(res_loop);
+//    int wire = gmsh::model::occ::addWire(curve_tags);
+    int area = gmsh::model::geo::addSurfaceFilling(curve_loop);
+//    int area = gmsh::model::occ::addSurfaceFilling(res_loop);
+//     int area = gmsh::model::occ::addPlaneSurface(curve_tags);
+//    gmsh::model::occ::addSurfaceFilling
+    gmsh::vectorpair dim_tag_object;
+    dim_tag_object.push_back(std::make_pair(1, f1));
+    gmsh::vectorpair dim_tag_tool;
+    dim_tag_tool.push_back(std::make_pair(1, f2));
+    gmsh::vectorpair outDimTags;
+    std::vector<gmsh::vectorpair> outDimTagsMap;
+//    gmsh::model::occ::intersect(dim_tag_object, dim_tag_tool, outDimTags, outDimTagsMap);
+    gmsh::model::occ::fragment(dim_tag_object, dim_tag_tool, outDimTags, outDimTagsMap);
+    
+    gmsh::model::occ::synchronize();
+    std::vector<int> fractures;
+    for (auto i: outDimTags) {
+        fractures.push_back(i.second);
+    }
+    gmsh::model::mesh::embed(1,fractures,2,area);
+    
+    gmsh::model::mesh::field::setAsBoundaryLayer(circle);
+//    std::string f1_name="fracture_1";
+//    gmsh::model::setPhysicalName(1, f1, f1_name);
+//    std::string f2_name="fracture_2";
+//    gmsh::model::setPhysicalName(1, f2, f2_name);
+    
+    gmsh::model::occ::synchronize();
+    gmsh::model::mesh::generate(2);
+//    gmsh::model::mesh::setRecombine(2, area);
+//    gmsh::model::mesh::generate(2);
+    //    gmsh::model::mesh::setOrder(2);
+    //gmsh::model::mesh::partition(4)
+    gmsh::write("wellbore_2D.msh");
+    
+    gmsh::finalize();
+}
+
 
 void InsertTheElements(TPZGeoMesh * gmesh);
 
@@ -51,10 +125,10 @@ void Wellbore_trajectory_3D(){
         
         /// wellbore radius
         REAL r_wb = 15.0;
-        REAL characteristic_length = 2.0*r_wb;
+        REAL characteristic_length = 1.0*r_wb;
         
         gmsh::option::setNumber("Mesh.CharacteristicLengthMin", characteristic_length);
-        gmsh::option::setNumber("Mesh.CharacteristicLengthMax", 100.0);
+        gmsh::option::setNumber("Mesh.CharacteristicLengthMax", 50.0);
         
         int n_data = 50;
         std::string file_name = "producer_trajectory.txt";
@@ -205,7 +279,7 @@ void Wellbore_trajectory_3D(){
     Geometry.SetFormatVersion("4.0");
     TPZGeoMesh * gmesh = Geometry.GeometricGmshMesh(geometry_file);
     Geometry.PrintPartitionSummary(std::cout);
-    std::string vtk_file = "wellbore_geo.vtk";
+    std::string vtk_file = "wellbore_geo";
     TPZGeoMeshBluider::PrintGeometry(gmesh,vtk_file);
     
 //    /// Building the geomesh object
@@ -334,8 +408,8 @@ void Constructive_solid_geometry(){
     
     
     gmsh::option::setNumber("Mesh.Algorithm", 6);
-    gmsh::option::setNumber("Mesh.CharacteristicLengthMin", 0.4);
-    gmsh::option::setNumber("Mesh.CharacteristicLengthMax", 0.4);
+    gmsh::option::setNumber("Mesh.CharacteristicLengthMin", 0.25);
+    gmsh::option::setNumber("Mesh.CharacteristicLengthMax", 0.25);
     
     double R = 1.4, Rs = R*.7, Rt = R*1.25;
     
@@ -390,7 +464,8 @@ void Constructive_solid_geometry(){
     
     /// Meshing directives
     gmsh::model::mesh::generate(3);
-    //    gmsh::model::mesh::refine();
+    gmsh::model::mesh::refine();
+    gmsh::model::mesh::refine();
     //    gmsh::model::mesh::setOrder(2);
     //gmsh::model::mesh::partition(4)
     gmsh::write("geometry.msh");
