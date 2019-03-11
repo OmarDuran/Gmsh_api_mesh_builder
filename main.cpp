@@ -47,6 +47,12 @@ void Wellbore_2D_with_factures(){
     gmsh::model::add("boolean");
     gmsh::option::setNumber("Mesh.Algorithm", 6);
     
+    double r = 2.0;
+    double r_w = 0.127;
+    
+    gmsh::option::setNumber("Mesh.CharacteristicLengthMin", 0.1*r_w);
+    gmsh::option::setNumber("Mesh.CharacteristicLengthMax", r);
+    
     int f1pt_i = gmsh::model::occ::addPoint(0.25,0,0);
     int f1pt_e = gmsh::model::occ::addPoint(1.5,1,0);
 
@@ -58,21 +64,29 @@ void Wellbore_2D_with_factures(){
     
     double x,y,z;
     x = y = z = 0.0;
-    double r = 2.0;
-    double r_w = 0.127;
-    int circle = gmsh::model::occ::addCircle(x, y, z, r);
-    int circle_rw = gmsh::model::occ::addCircle(x, y, z, r_w);
-//    gmsh::model::occ::synchronize();
+
+    int circle_res = gmsh::model::occ::addCircle(x, y, z, r);
+    int circle_well = gmsh::model::occ::addCircle(x, y, z, r_w);
+    gmsh::model::occ::synchronize();
+    
     std::vector<int> curve_tags;
-    curve_tags.push_back(circle);
-    curve_tags.push_back(circle_rw);
-    int res_loop = gmsh::model::geo::addCurveLoop(curve_tags);
-    std::vector<int> curve_loop;
-    curve_loop.push_back(res_loop);
-//    int wire = gmsh::model::occ::addWire(curve_tags);
-    int area = gmsh::model::geo::addSurfaceFilling(curve_loop);
-//    int area = gmsh::model::occ::addSurfaceFilling(res_loop);
-//     int area = gmsh::model::occ::addPlaneSurface(curve_tags);
+    curve_tags.push_back(circle_res);
+    int wire_res =gmsh::model::occ::addWire(curve_tags);
+    curve_tags[0] = circle_well;
+    int wire_well =gmsh::model::occ::addWire(curve_tags);
+ 
+    int res_area = gmsh::model::occ::addSurfaceFilling(wire_res);
+    int well_area = gmsh::model::occ::addSurfaceFilling(wire_well);
+
+    gmsh::vectorpair dim_tag_res;
+    dim_tag_res.push_back(std::make_pair(2, res_area));
+    gmsh::vectorpair dim_tag_well;
+    dim_tag_well.push_back(std::make_pair(2, well_area));
+    
+    gmsh::vectorpair out_dim_tags;
+    std::vector<gmsh::vectorpair> out_dim_tags_maps;
+    gmsh::model::occ::cut(dim_tag_res, dim_tag_well, out_dim_tags, out_dim_tags_maps);
+    
 //    gmsh::model::occ::addSurfaceFilling
     gmsh::vectorpair dim_tag_object;
     dim_tag_object.push_back(std::make_pair(1, f1));
@@ -80,7 +94,6 @@ void Wellbore_2D_with_factures(){
     dim_tag_tool.push_back(std::make_pair(1, f2));
     gmsh::vectorpair outDimTags;
     std::vector<gmsh::vectorpair> outDimTagsMap;
-//    gmsh::model::occ::intersect(dim_tag_object, dim_tag_tool, outDimTags, outDimTagsMap);
     gmsh::model::occ::fragment(dim_tag_object, dim_tag_tool, outDimTags, outDimTagsMap);
     
     gmsh::model::occ::synchronize();
@@ -88,13 +101,33 @@ void Wellbore_2D_with_factures(){
     for (auto i: outDimTags) {
         fractures.push_back(i.second);
     }
-    gmsh::model::mesh::embed(1,fractures,2,area);
     
-    gmsh::model::mesh::field::setAsBoundaryLayer(circle);
-//    std::string f1_name="fracture_1";
-//    gmsh::model::setPhysicalName(1, f1, f1_name);
-//    std::string f2_name="fracture_2";
-//    gmsh::model::setPhysicalName(1, f2, f2_name);
+    int domain_area = out_dim_tags[0].second;
+    gmsh::model::mesh::embed(1,fractures,2,domain_area);
+    
+    gmsh::vectorpair bc_dim_tags;
+    gmsh::model::getBoundary(out_dim_tags, bc_dim_tags);
+    
+    
+    gmsh::model::mesh::field::setAsBoundaryLayer(circle_res);
+
+    /// Functional physical tag for fractures
+    int c = 1;
+    for (auto f : outDimTagsMap) {
+        int dim = f[0].first;
+        std::vector<int> tags;
+        for (auto micro_f : f) {
+            tags.push_back(micro_f.second);
+        }
+        gmsh::model::addPhysicalGroup(dim, tags);
+        stringstream f_name;
+        f_name << "fracture_" << c;
+        std::string name = f_name.str();
+        gmsh::model::setPhysicalName(dim, c, name);
+        c++;
+    }
+    
+
     
     gmsh::model::occ::synchronize();
     gmsh::model::mesh::generate(2);
@@ -104,7 +137,7 @@ void Wellbore_2D_with_factures(){
     //gmsh::model::mesh::partition(4)
     gmsh::write("wellbore_2D.msh");
     
-    gmsh::finalize();
+    gmsh::finalize(); /// Mandatory
 }
 
 
