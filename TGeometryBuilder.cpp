@@ -136,15 +136,163 @@ void TGeometryBuilder::BuildDFN(){
     
 }
 
+void TGeometryBuilder::DrawCirclePoints(double r, std::vector<double> x_center, std::vector<std::vector<double>> & points){
+    
+    std::vector<double> point(x_center);
+    // p_center
+    points.push_back(point);
+    
+    // p1
+    point[0] = r;
+    point[1] = 0;
+    points.push_back(point);
+    
+    // p2
+    point[0] = 0;
+    point[1] = r;
+    points.push_back(point);
+    
+    // p3
+    point[0] = -r;
+    point[1] = 0;
+    points.push_back(point);
+    
+    // p4
+    point[0] = 0;
+    point[1] = -r;
+    points.push_back(point);
+    
+}
+
+void TGeometryBuilder::DrawRectanglePoints(std::vector<double> x_mix, std::vector<double> x_max, std::vector<std::vector<double>> & points){
+    
+    double z = 0.0;
+    if (x_mix[2]==x_max[2]) {
+        z = x_mix[2];
+    }
+    
+    std::vector<double> point(x_mix);
+    // p1
+    point[0] = x_mix[0];
+    point[1] = x_mix[1];
+    point[2] = z;
+    points.push_back(point);
+    
+    // p2
+    point[0] = x_max[0];
+    point[1] = x_mix[1];
+    point[2] = z;
+    points.push_back(point);
+    
+    // p2
+    point[0] = x_max[0];
+    point[1] = x_max[1];
+    point[2] = z;
+    points.push_back(point);
+    
+    // p4
+    point[0] = x_mix[0];
+    point[1] = x_max[1];
+    point[2] = z;
+    points.push_back(point);
+    
+}
 
 void TGeometryBuilder::DrawInternalCricle(double r, std::vector<double> x_center){
+    
+    DrawCirclePoints(r,x_center,m_internal_wire_pts);
+    int n_point = m_internal_wire_pts.size();
+    for (int ip = 0; ip < n_point; ip++) {
+    
+        std::vector<double> point = m_internal_wire_pts[ip];
+        double x = point[0];
+        double y = point[1];
+        double z = point[2];
+        int point_tag = gmsh::model::occ::addPoint(x, y, z);
+        m_internal_point_tags.push_back(point_tag);
+    }
+    
+    int pc = m_internal_point_tags[0];
+    int p1 = m_internal_point_tags[1];
+    int p2 = m_internal_point_tags[2];
+    int p3 = m_internal_point_tags[3];
+    int p4 = m_internal_point_tags[4];
+    
+    int c1 = gmsh::model::occ::addEllipseArc(p1, pc, p2);
+    int c2 = gmsh::model::occ::addEllipseArc(p2, pc, p3);
+    int c3 = gmsh::model::occ::addEllipseArc(p3, pc, p4);
+    int c4 = gmsh::model::occ::addEllipseArc(p4, pc, p1);
+    
+    m_internal_wire_curve_tags.push_back(c1);
+    m_internal_wire_curve_tags.push_back(c2);
+    m_internal_wire_curve_tags.push_back(c3);
+    m_internal_wire_curve_tags.push_back(c4);
+    m_internal_wire_curve_loop = gmsh::model::occ::addWire(m_internal_wire_curve_tags);
     
 }
 
 void TGeometryBuilder::DrawExternalCricle(double r, std::vector<double> x_center){
     
+    DrawCirclePoints(r,x_center,m_external_wire_pts);
+    int n_point = m_external_wire_pts.size();
+    for (int ip = 0; ip < n_point; ip++) {
+        
+        std::vector<double> point = m_external_wire_pts[ip];
+        double x = point[0];
+        double y = point[1];
+        double z = point[2];
+        int point_tag = gmsh::model::occ::addPoint(x, y, z);
+        m_external_wire_point_tags.push_back(point_tag);
+    }
+    
+    
+    int pc = m_external_wire_point_tags[0];
+    int p1 = m_external_wire_point_tags[1];
+    int p2 = m_external_wire_point_tags[2];
+    int p3 = m_external_wire_point_tags[3];
+    int p4 = m_external_wire_point_tags[4];
+    
+    int c1 = gmsh::model::occ::addEllipseArc(p1, pc, p2);
+    int c2 = gmsh::model::occ::addEllipseArc(p2, pc, p3);
+    int c3 = gmsh::model::occ::addEllipseArc(p3, pc, p4);
+    int c4 = gmsh::model::occ::addEllipseArc(p4, pc, p1);
+    
+    m_external_wire_curve_tags.push_back(c1);
+    m_external_wire_curve_tags.push_back(c2);
+    m_external_wire_curve_tags.push_back(c3);
+    m_external_wire_curve_tags.push_back(c4);
+    m_external_wire_curve_loop = gmsh::model::occ::addWire(m_external_wire_curve_tags);
+    
 }
 
 void TGeometryBuilder::DrawExternalRectangle(std::vector<double> x_mix, std::vector<double> x_max){
+    
+    DrawRectanglePoints(x_mix, x_max, m_external_wire_pts);
+    int n_point = m_external_wire_pts.size();
+    for (int ip = 0; ip < n_point; ip++) {
+        
+        std::vector<double> point = m_external_wire_pts[ip];
+        double x = point[0];
+        double y = point[1];
+        double z = point[2];
+        int point_tag = gmsh::model::occ::addPoint(x, y, z);
+        m_external_wire_point_tags.push_back(point_tag);
+    }
+    
+    int p1 = m_external_wire_point_tags[1];
+    int p2 = m_external_wire_point_tags[2];
+    int p3 = m_external_wire_point_tags[3];
+    int p4 = m_external_wire_point_tags[4];
+    
+    int c1 = gmsh::model::occ::addLine(p1, p2);
+    int c2 = gmsh::model::occ::addLine(p2, p3);
+    int c3 = gmsh::model::occ::addLine(p3, p4);
+    int c4 = gmsh::model::occ::addLine(p4, p1);
+    
+    m_external_wire_curve_tags.push_back(c1);
+    m_external_wire_curve_tags.push_back(c2);
+    m_external_wire_curve_tags.push_back(c3);
+    m_external_wire_curve_tags.push_back(c4);
+    m_external_wire_curve_loop = gmsh::model::occ::addWire(m_external_wire_curve_tags);
     
 }

@@ -75,7 +75,12 @@ private:
     
     /// Construct the DFN (including intersections fracture-frature or fracture-boundary). Uses gmsh as engine.
     void BuildDFN();
+    
+    /// Draw a circle points with radius r and center x_center
+    void DrawCirclePoints(double r, std::vector<double> x_center, std::vector<std::vector<double>> & points);
 
+    /// Draw a rectangle points with with x_mix coordinate and x_max coordinate
+    void DrawRectanglePoints(std::vector<double> x_mix, std::vector<double> x_max, std::vector<std::vector<double>> & points);
     
 public:
     
