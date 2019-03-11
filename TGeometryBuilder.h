@@ -52,6 +52,12 @@ private:
     /// Vector of internal point tags
     std::vector<int> m_internal_point_tags;
     
+    /// Vector of base fracture points
+    std::vector<int> m_base_fracture_point_tags;
+    
+    /// Vector of fracture points
+    std::vector<int> m_fracture_point_tags;
+    
     /// Load the user-defined points (x,y,z)
     std::vector<std::vector<double>> LoadPoints(std::string & file_name, int n_data);
 

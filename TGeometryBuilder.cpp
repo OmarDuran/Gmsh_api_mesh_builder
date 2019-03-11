@@ -62,18 +62,6 @@ void TGeometryBuilder::LoadDiscreteFractureNetwork(std::string & file_name, int 
     m_fracture_pts = LoadPoints(file_name, n_data);
 }
 
-void TGeometryBuilder::DrawInternalCricle(double r, std::vector<double> x_center){
-    
-}
-
-void TGeometryBuilder::DrawExternalCricle(double r, std::vector<double> x_center){
-    
-}
-
-void TGeometryBuilder::DrawExternalRectangle(std::vector<double> x_mix, std::vector<double> x_max){
-    
-}
-
 void TGeometryBuilder::BuildWire(std::vector<std::vector<double>> & points, std::vector<int> & ignored_points, std::vector<int> & point_tags, std::vector<int> & curve_tags, int & curve_loop){
     
     int n_point = points.size();
@@ -134,5 +122,29 @@ void TGeometryBuilder::BuildInternalPoints(){
 }
 
 void TGeometryBuilder::BuildDFN(){
+    
+    int n_point = m_fracture_pts.size();
+    for (int ip = 0; ip < n_point; ip++) {
+        
+        std::vector<double> point = m_internal_pts[ip];
+        double x = point[0];
+        double y = point[1];
+        double z = point[2];
+        int point_tag = gmsh::model::occ::addPoint(x, y, z);
+        m_base_fracture_point_tags.push_back(point_tag);
+    }
+    
+}
+
+
+void TGeometryBuilder::DrawInternalCricle(double r, std::vector<double> x_center){
+    
+}
+
+void TGeometryBuilder::DrawExternalCricle(double r, std::vector<double> x_center){
+    
+}
+
+void TGeometryBuilder::DrawExternalRectangle(std::vector<double> x_mix, std::vector<double> x_max){
     
 }
