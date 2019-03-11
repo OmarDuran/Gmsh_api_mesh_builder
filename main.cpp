@@ -225,8 +225,6 @@ void Wellbore_2D_with_factures(){
         c_p_tag++;
     }
     
-
-    
     /// Functional physical tag for fractures
     int c = 1;
     for (auto f : outDimTagsMap) {
@@ -254,6 +252,16 @@ void Wellbore_2D_with_factures(){
         }
     }
     
+    {
+        int n_fracture_nodes = 10;
+        for (auto f : outDimTagsMap) {
+            std::vector<int> tags;
+            for (auto micro_f : f) {
+                gmsh::model::mesh::setTransfiniteCurve(micro_f.second, n_fracture_nodes);
+            }
+        }
+    }
+    
 
     gmsh::model::occ::synchronize();
 //    gmsh::model::mesh::setRecombine(2, domain_area);
@@ -262,6 +270,9 @@ void Wellbore_2D_with_factures(){
 //    gmsh::model::mesh::generate(2);
     //    gmsh::model::mesh::setOrder(2);
     //gmsh::model::mesh::partition(4)
+    
+    /// Coherence
+    
     gmsh::write("wellbore_2D.msh");
     
     gmsh::finalize(); /// Mandatory
