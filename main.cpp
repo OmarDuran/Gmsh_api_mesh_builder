@@ -72,7 +72,6 @@ void Wellbore_2D_with_factures(){
     std::vector<gmsh::vectorpair> outDimTagsMap;
     gmsh::model::occ::fragment(dim_tag_object, dim_tag_tool, outDimTags, outDimTagsMap);
     
-    
     /// Construction for computational domain
     /// The domain is constructed by a boolean operation
     gmsh::model::occ::synchronize();
