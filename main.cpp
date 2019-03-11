@@ -76,21 +76,92 @@ void Wellbore_2D_with_factures(){
     /// Construction for computational domain
     /// The domain is constructed by a boolean operation
     gmsh::model::occ::synchronize();
+
     double x,y,z;
     x = y = z = 0.0;
     
-    int circle_res = gmsh::model::occ::addCircle(x, y, z, r);
-    int circle_well = gmsh::model::occ::addCircle(x, y, z, r_w);
+    int pc = gmsh::model::occ::addPoint(x, y, z);
+    
+    gmsh::vectorpair bc_external;
+    int res_area;
+    { /// construct outer circle
+        
+        x = r;
+        y = 0;
+        int p1 = gmsh::model::occ::addPoint(x, y, z);
+        
+        x = 0;
+        y = r;
+        int p2 = gmsh::model::occ::addPoint(x, y, z);
+        
+        x = -r;
+        y = 0;
+        int p3 = gmsh::model::occ::addPoint(x, y, z);
+        
+        x = 0;
+        y = -r;
+        int p4 = gmsh::model::occ::addPoint(x, y, z);
+        
+        int c1 = gmsh::model::occ::addEllipseArc(p1, pc, p2);
+        int c2 = gmsh::model::occ::addEllipseArc(p2, pc, p3);
+        int c3 = gmsh::model::occ::addEllipseArc(p3, pc, p4);
+        int c4 = gmsh::model::occ::addEllipseArc(p4, pc, p1);
+        
+        bc_external.push_back(std::make_pair(1, c1));
+        bc_external.push_back(std::make_pair(1, c2));
+        bc_external.push_back(std::make_pair(1, c3));
+        bc_external.push_back(std::make_pair(1, c4));
+        
+        std::vector<int> curve_tags;
+        curve_tags.push_back(c1);
+        curve_tags.push_back(c2);
+        curve_tags.push_back(c3);
+        curve_tags.push_back(c4);
+        int external_circle_loop = gmsh::model::occ::addWire(curve_tags);
+        res_area = gmsh::model::occ::addSurfaceFilling(external_circle_loop);
+    }
+    
+    gmsh::vectorpair bc_internal;
+    int well_area;
+    { /// Construction of internal circle
+        x = r_w;
+        y = 0;
+        int p1 = gmsh::model::occ::addPoint(x, y, z);
+        
+        x = 0;
+        y = r_w;
+        int p2 = gmsh::model::occ::addPoint(x, y, z);
+        
+        x = -r_w;
+        y = 0;
+        int p3 = gmsh::model::occ::addPoint(x, y, z);
+        
+        x = 0;
+        y = -r_w;
+        int p4 = gmsh::model::occ::addPoint(x, y, z);
+        
+        int c1 = gmsh::model::occ::addEllipseArc(p1, pc, p2);
+        int c2 = gmsh::model::occ::addEllipseArc(p2, pc, p3);
+        int c3 = gmsh::model::occ::addEllipseArc(p3, pc, p4);
+        int c4 = gmsh::model::occ::addEllipseArc(p4, pc, p1);
+        
+        bc_external.push_back(std::make_pair(1, c1));
+        bc_external.push_back(std::make_pair(1, c2));
+        bc_external.push_back(std::make_pair(1, c3));
+        bc_external.push_back(std::make_pair(1, c4));
+        
+        std::vector<int> curve_tags;
+        curve_tags.push_back(c1);
+        curve_tags.push_back(c2);
+        curve_tags.push_back(c3);
+        curve_tags.push_back(c4);
+        int internal_circle_loop = gmsh::model::occ::addWire(curve_tags);
+        well_area = gmsh::model::occ::addSurfaceFilling(internal_circle_loop);
+    }
+    
+    
+    
     gmsh::model::occ::synchronize();
-    
-    std::vector<int> curve_tags;
-    curve_tags.push_back(circle_res);
-    int wire_res = gmsh::model::occ::addWire(curve_tags);
-    curve_tags[0] = circle_well;
-    int wire_well = gmsh::model::occ::addWire(curve_tags);
-    
-    int res_area = gmsh::model::occ::addSurfaceFilling(wire_res);
-    int well_area = gmsh::model::occ::addSurfaceFilling(wire_well);
     
     gmsh::vectorpair dim_tag_res;
     dim_tag_res.push_back(std::make_pair(2, res_area));
@@ -131,12 +202,27 @@ void Wellbore_2D_with_factures(){
     
     /// Physical tag for computational boundaries
     dim--;
-    {
+    { ///  internal
         std::vector<int> bc_tags;
-        bc_tags.push_back(bc_dim_tags[0].second);///  Assuming this one is the external one
+        for (auto bc: bc_internal) {
+            bc_tags.push_back(bc.second);
+        }
         gmsh::model::addPhysicalGroup(dim, tags);
         stringstream s_bc_name;
-        s_bc_name << "far_field";
+        s_bc_name << "bc_internal";
+        std::string bc_name = s_bc_name.str();
+        gmsh::model::setPhysicalName(dim, c_p_tag, bc_name);
+        c_p_tag++;
+    }
+    
+    { ///  external
+        std::vector<int> bc_tags;
+        for (auto bc: bc_external) {
+            bc_tags.push_back(bc.second);
+        }
+        gmsh::model::addPhysicalGroup(dim, tags);
+        stringstream s_bc_name;
+        s_bc_name << "bc_external";
         std::string bc_name = s_bc_name.str();
         gmsh::model::setPhysicalName(dim, c_p_tag, bc_name);
         c_p_tag++;
