@@ -83,7 +83,7 @@ void Wellbore_2D_with_factures(){
     gmsh::vectorpair bc_external;
     std::vector<int> curve_external_tags;
     int external_circle_loop;
-    int res_area;
+
     { /// construct outer circle
         
         x = r;
@@ -122,7 +122,7 @@ void Wellbore_2D_with_factures(){
     gmsh::vectorpair bc_internal;
     std::vector<int> curve_internal_tags;
     int internal_circle_loop;
-    int well_area;
+
     { /// Construction of internal circle
         x = r_w;
         y = 0;
