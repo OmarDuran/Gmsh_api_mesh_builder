@@ -53,6 +53,8 @@ void Wellbore_2D_with_factures(){
     gmsh::option::setNumber("Mesh.CharacteristicLengthMin", 0.1*r_w);
     gmsh::option::setNumber("Mesh.CharacteristicLengthMax", r);
     
+    
+    /// Construction for fractures intersections
     int f1pt_i = gmsh::model::occ::addPoint(0.25,0,0);
     int f1pt_e = gmsh::model::occ::addPoint(1.5,1,0);
 
@@ -62,9 +64,20 @@ void Wellbore_2D_with_factures(){
     int f1 = gmsh::model::occ::addLine(f1pt_i, f1pt_e);
     int f2 = gmsh::model::occ::addLine(f2pt_i, f2pt_e);
     
+    gmsh::vectorpair dim_tag_object;
+    dim_tag_object.push_back(std::make_pair(1, f1));
+    gmsh::vectorpair dim_tag_tool;
+    dim_tag_tool.push_back(std::make_pair(1, f2));
+    gmsh::vectorpair outDimTags;
+    std::vector<gmsh::vectorpair> outDimTagsMap;
+    gmsh::model::occ::fragment(dim_tag_object, dim_tag_tool, outDimTags, outDimTagsMap);
+    
+    
+    /// Construction for computational domain
+    /// The domain is constructed by a boolean operation
     double x,y,z;
     x = y = z = 0.0;
-
+    
     int circle_res = gmsh::model::occ::addCircle(x, y, z, r);
     int circle_well = gmsh::model::occ::addCircle(x, y, z, r_w);
     gmsh::model::occ::synchronize();
@@ -74,10 +87,10 @@ void Wellbore_2D_with_factures(){
     int wire_res =gmsh::model::occ::addWire(curve_tags);
     curve_tags[0] = circle_well;
     int wire_well =gmsh::model::occ::addWire(curve_tags);
- 
+    
     int res_area = gmsh::model::occ::addSurfaceFilling(wire_res);
     int well_area = gmsh::model::occ::addSurfaceFilling(wire_well);
-
+    
     gmsh::vectorpair dim_tag_res;
     dim_tag_res.push_back(std::make_pair(2, res_area));
     gmsh::vectorpair dim_tag_well;
@@ -87,15 +100,8 @@ void Wellbore_2D_with_factures(){
     std::vector<gmsh::vectorpair> out_dim_tags_maps;
     gmsh::model::occ::cut(dim_tag_res, dim_tag_well, out_dim_tags, out_dim_tags_maps);
     
-//    gmsh::model::occ::addSurfaceFilling
-    gmsh::vectorpair dim_tag_object;
-    dim_tag_object.push_back(std::make_pair(1, f1));
-    gmsh::vectorpair dim_tag_tool;
-    dim_tag_tool.push_back(std::make_pair(1, f2));
-    gmsh::vectorpair outDimTags;
-    std::vector<gmsh::vectorpair> outDimTagsMap;
-    gmsh::model::occ::fragment(dim_tag_object, dim_tag_tool, outDimTags, outDimTagsMap);
     
+    /// Embed fractures on computational domain
     gmsh::model::occ::synchronize();
     std::vector<int> fractures;
     for (auto i: outDimTags) {
@@ -105,12 +111,26 @@ void Wellbore_2D_with_factures(){
     int domain_area = out_dim_tags[0].second;
     gmsh::model::mesh::embed(1,fractures,2,domain_area);
     
+    
+    /// Physical tag
+    
+    /// Functional physical tag for computational domain
+    int c_p_tag = 1;
+    int dim = 2;
+    std::vector<int> tags;
+    tags.push_back(domain_area);
+    gmsh::model::addPhysicalGroup(dim, tags);
+    stringstream f_name;
+    f_name << "reservoir";
+    std::string name = f_name.str();
+    gmsh::model::setPhysicalName(dim, c_p_tag, name);
+    c_p_tag++;
+    
+    /// Physical tag for computational boundaries
     gmsh::vectorpair bc_dim_tags;
     gmsh::model::getBoundary(out_dim_tags, bc_dim_tags);
-    
-    
     gmsh::model::mesh::field::setAsBoundaryLayer(circle_res);
-
+    
     /// Functional physical tag for fractures
     int c = 1;
     for (auto f : outDimTagsMap) {
@@ -123,11 +143,13 @@ void Wellbore_2D_with_factures(){
         stringstream f_name;
         f_name << "fracture_" << c;
         std::string name = f_name.str();
-        gmsh::model::setPhysicalName(dim, c, name);
+        gmsh::model::setPhysicalName(dim, c_p_tag, name);
         c++;
+        c_p_tag++;
     }
     
 
+    /// Meshing constrols
     
     gmsh::model::occ::synchronize();
     gmsh::model::mesh::generate(2);
