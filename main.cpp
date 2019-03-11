@@ -81,8 +81,9 @@ void Wellbore_2D_with_factures(){
     x = y = z = 0.0;
     
     int pc = gmsh::model::occ::addPoint(x, y, z);
-    
     gmsh::vectorpair bc_external;
+    std::vector<int> curve_external_tags;
+    int external_circle_loop;
     int res_area;
     { /// construct outer circle
         
@@ -112,16 +113,17 @@ void Wellbore_2D_with_factures(){
         bc_external.push_back(std::make_pair(1, c3));
         bc_external.push_back(std::make_pair(1, c4));
         
-        std::vector<int> curve_tags;
-        curve_tags.push_back(c1);
-        curve_tags.push_back(c2);
-        curve_tags.push_back(c3);
-        curve_tags.push_back(c4);
-        int external_circle_loop = gmsh::model::occ::addWire(curve_tags);
-        res_area = gmsh::model::occ::addSurfaceFilling(external_circle_loop);
+        curve_external_tags.push_back(c1);
+        curve_external_tags.push_back(c2);
+        curve_external_tags.push_back(c3);
+        curve_external_tags.push_back(c4);
+        external_circle_loop = gmsh::model::occ::addWire(curve_external_tags);
+//        res_area = gmsh::model::occ::addSurfaceFilling(external_circle_loop);
     }
     
     gmsh::vectorpair bc_internal;
+    std::vector<int> curve_internal_tags;
+    int internal_circle_loop;
     int well_area;
     { /// Construction of internal circle
         x = r_w;
@@ -150,32 +152,47 @@ void Wellbore_2D_with_factures(){
         bc_external.push_back(std::make_pair(1, c3));
         bc_external.push_back(std::make_pair(1, c4));
         
-        std::vector<int> curve_tags;
-        curve_tags.push_back(c1);
-        curve_tags.push_back(c2);
-        curve_tags.push_back(c3);
-        curve_tags.push_back(c4);
-        int internal_circle_loop = gmsh::model::occ::addWire(curve_tags);
-        well_area = gmsh::model::occ::addSurfaceFilling(internal_circle_loop);
+        
+        curve_internal_tags.push_back(c1);
+        curve_internal_tags.push_back(c2);
+        curve_internal_tags.push_back(c3);
+        curve_internal_tags.push_back(c4);
+        internal_circle_loop = gmsh::model::occ::addWire(curve_internal_tags);
+//        well_area = gmsh::model::occ::addSurfaceFilling(internal_circle_loop);
     }
     
     
+    {
+//        gmsh::vectorpair dim_tag_res;
+//        dim_tag_res.push_back(std::make_pair(2, res_area));
+//        gmsh::vectorpair dim_tag_well;
+//        dim_tag_well.push_back(std::make_pair(2, well_area));
+//
+//        gmsh::vectorpair out_dim_tags;
+//        std::vector<gmsh::vectorpair> out_dim_tags_maps;
+//        gmsh::model::occ::cut(dim_tag_res, dim_tag_well, out_dim_tags, out_dim_tags_maps);
+//
+//        gmsh::model::occ::synchronize();
+//        gmsh::vectorpair bc_dim_tags;
+//        gmsh::model::getBoundary(out_dim_tags, bc_dim_tags);
+//        int domain_area = out_dim_tags[0].second;
+    }
     
-    gmsh::model::occ::synchronize();
+    /// construction by already defined wires
+    std::vector<int> res_curve_tags;
+    for (auto i: curve_external_tags) {
+        res_curve_tags.push_back(i);
+    }
+    for (auto i: curve_internal_tags) {
+        res_curve_tags.push_back(i);
+    }
+
     
-    gmsh::vectorpair dim_tag_res;
-    dim_tag_res.push_back(std::make_pair(2, res_area));
-    gmsh::vectorpair dim_tag_well;
-    dim_tag_well.push_back(std::make_pair(2, well_area));
-    
-    gmsh::vectorpair out_dim_tags;
-    std::vector<gmsh::vectorpair> out_dim_tags_maps;
-    gmsh::model::occ::cut(dim_tag_res, dim_tag_well, out_dim_tags, out_dim_tags_maps);
-    
-    gmsh::model::occ::synchronize();
-    gmsh::vectorpair bc_dim_tags;
-    gmsh::model::getBoundary(out_dim_tags, bc_dim_tags);
-    int domain_area = out_dim_tags[0].second;
+    std::vector<int> wire_tags;
+    wire_tags.push_back(internal_circle_loop);
+    wire_tags.push_back(external_circle_loop);
+//    int lines_loop = gmsh::model::occ::addWire(res_curve_tags);
+    int domain_area = gmsh::model::occ::addPlaneSurface(wire_tags);
     
 //    /// Embed fractures on computational domain
 //    gmsh::model::occ::synchronize();
@@ -185,7 +202,7 @@ void Wellbore_2D_with_factures(){
 //    }
 //    gmsh::model::mesh::embed(1,fractures,2,domain_area);
     
-    
+    gmsh::model::occ::synchronize();
     /// Physical tag
     
     /// Functional physical tag for computational domain
@@ -204,10 +221,10 @@ void Wellbore_2D_with_factures(){
     dim--;
     { ///  internal
         std::vector<int> bc_tags;
-        for (auto bc: bc_internal) {
-            bc_tags.push_back(bc.second);
+        for (auto bc: curve_internal_tags) {
+            bc_tags.push_back(bc);
         }
-        gmsh::model::addPhysicalGroup(dim, tags);
+        gmsh::model::addPhysicalGroup(dim, bc_tags);
         stringstream s_bc_name;
         s_bc_name << "bc_internal";
         std::string bc_name = s_bc_name.str();
@@ -217,10 +234,10 @@ void Wellbore_2D_with_factures(){
     
     { ///  external
         std::vector<int> bc_tags;
-        for (auto bc: bc_external) {
-            bc_tags.push_back(bc.second);
+        for (auto bc: curve_external_tags) {
+            bc_tags.push_back(bc);
         }
-        gmsh::model::addPhysicalGroup(dim, tags);
+        gmsh::model::addPhysicalGroup(dim, bc_tags);
         stringstream s_bc_name;
         s_bc_name << "bc_external";
         std::string bc_name = s_bc_name.str();
