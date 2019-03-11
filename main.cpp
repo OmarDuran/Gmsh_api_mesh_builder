@@ -266,10 +266,19 @@ void Wellbore_2D_with_factures(){
     
 
     /// Meshing constrols
+    {
+        int n_nodes = 10;
+        std::vector<int> bc_tags;
+        for (auto bc: curve_internal_tags) {
+            gmsh::model::mesh::setTransfiniteCurve(bc, n_nodes);
+        }
+    }
     
+
     gmsh::model::occ::synchronize();
+//    gmsh::model::mesh::setRecombine(2, domain_area);
     gmsh::model::mesh::generate(2);
-//    gmsh::model::mesh::setRecombine(2, area);
+    
 //    gmsh::model::mesh::generate(2);
     //    gmsh::model::mesh::setOrder(2);
     //gmsh::model::mesh::partition(4)
