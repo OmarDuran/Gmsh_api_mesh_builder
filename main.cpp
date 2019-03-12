@@ -54,41 +54,47 @@ void Wellbore_2D_with_factures(){
     gmsh::option::setNumber("Mesh.CharacteristicLengthMax", r);
     
     
-    /// Construction for fractures intersections
-    int f1pt_i = gmsh::model::occ::addPoint(0.25,0,0);
-    int f1pt_e = gmsh::model::occ::addPoint(1.5,1,0);
-
-    int f2pt_i = gmsh::model::occ::addPoint(1.0,1,0);
-    int f2pt_e = gmsh::model::occ::addPoint(1.25,-0.5,0);
-
-    int f1 = gmsh::model::occ::addLine(f1pt_i, f1pt_e);
-    int f2 = gmsh::model::occ::addLine(f2pt_i, f2pt_e);
-
-    gmsh::vectorpair dim_tag_object;
-    dim_tag_object.push_back(std::make_pair(1, f1));
-    gmsh::vectorpair dim_tag_tool;
-    dim_tag_tool.push_back(std::make_pair(1, f2));
-    gmsh::vectorpair outDimTags;
-    std::vector<gmsh::vectorpair> outDimTagsMap;
-    gmsh::model::occ::fragment(dim_tag_object, dim_tag_tool, outDimTags, outDimTagsMap);
+//    /// Construction for fractures intersections
+//    int f1pt_i = gmsh::model::occ::addPoint(0.25,0,0);
+//    int f1pt_e = gmsh::model::occ::addPoint(1.5,1,0);
+//
+//    int f2pt_i = gmsh::model::occ::addPoint(1.0,1,0);
+//    int f2pt_e = gmsh::model::occ::addPoint(1.25,-0.5,0);
+//
+//    int f1 = gmsh::model::occ::addLine(f1pt_i, f1pt_e);
+//    int f2 = gmsh::model::occ::addLine(f2pt_i, f2pt_e);
+//
+//    gmsh::vectorpair dim_tag_object;
+//    dim_tag_object.push_back(std::make_pair(1, f1));
+//    gmsh::vectorpair dim_tag_tool;
+//    dim_tag_tool.push_back(std::make_pair(1, f2));
+//    gmsh::vectorpair outDimTags;
+//    std::vector<gmsh::vectorpair> outDimTagsMap;
+//    gmsh::model::occ::fragment(dim_tag_object, dim_tag_tool, outDimTags, outDimTagsMap);
     
     /// Construction for computational domain
     /// The domain is constructed by a boolean operation
-    gmsh::model::occ::synchronize();
 
     TGeometryBuilder geo_builder;
+    std::string file_name = "dfn.txt";
+    int n_data = 20;
+    geo_builder.LoadDiscreteFractureNetwork(file_name, n_data);
+    geo_builder.BuildDFN();
+    
+    gmsh::model::occ::synchronize();
     std::vector<double> x_center(3,0);
-    geo_builder.DrawInternalCricle(r_w, x_center);
+//    geo_builder.DrawInternalCricle(r_w, x_center);
+//    geo_builder.DrawExternalCricle(r, x_center);
+//    std::vector<double> x_mix(3,0);
+//    std::vector<double> x_max(3,0);
+//    x_mix[0] = -4.0;
+//    x_mix[1] = -4.0;
+//    x_max[0] = +4.0;
+//    x_max[1] = +4.0;
+//    geo_builder.DrawExternalRectangle(x_mix, x_max);
     
-    std::vector<double> x_mix(3,0);
-    std::vector<double> x_max(3,0);
-    x_mix[0] = -4.0;
-    x_mix[1] = -4.0;
-    x_max[0] = +4.0;
-    x_max[1] = +4.0;
-    geo_builder.DrawExternalRectangle(x_mix, x_max);
-    
-    int domain_area = geo_builder.DrawWellboreRegion();
+//    geo_builder.DrawWellboreRegion();
+//    int domain_area = geo_builder.m_wellbore_region_tags[0];
     
 //    /// construction by already defined wires
 //    std::vector<int> res_curve_tags;
@@ -100,37 +106,38 @@ void Wellbore_2D_with_factures(){
 //    }
 
     
-    /// Embed fractures on computational domain
-    gmsh::model::occ::synchronize();
-    std::vector<int> fractures;
-    for (auto i: outDimTags) {
-        fractures.push_back(i.second);
-    }
-    gmsh::model::mesh::embed(1,fractures,2,domain_area);
+//    /// Embed fractures on computational domain
+//    gmsh::model::occ::synchronize();
+//    std::vector<int> fractures;
+//    for (auto i: outDimTags) {
+//        fractures.push_back(i.second);
+//    }
+//    gmsh::model::mesh::embed(1,fractures,2,domain_area);
     
     gmsh::model::occ::synchronize();
     /// Physical tag
     
-    std::vector<int> res_physical_tags;
-    res_physical_tags = geo_builder.ComputeReservoirPhysicalTags();
+//    std::vector<int> res_physical_tags;
+//    geo_builder.ComputeReservoirPhysicalTags();
+//    res_physical_tags = geo_builder.m_wellbore_region_physical_tags;
     
-    int c_p_tag = res_physical_tags[2]+1;
-    /// Functional physical tag for fractures
-    int c = 1;
-    for (auto f : outDimTagsMap) {
-        int dim = f[0].first;
-        std::vector<int> tags;
-        for (auto micro_f : f) {
-            tags.push_back(micro_f.second);
-        }
-        gmsh::model::addPhysicalGroup(dim, tags);
-        stringstream f_name;
-        f_name << "fracture_" << c;
-        std::string name = f_name.str();
-        gmsh::model::setPhysicalName(dim, c_p_tag, name);
-        c++;
-        c_p_tag++;
-    }
+//    int c_p_tag = res_physical_tags[2]+1;
+//    /// Functional physical tag for fractures
+//    int c = 1;
+//    for (auto f : outDimTagsMap) {
+//        int dim = f[0].first;
+//        std::vector<int> tags;
+//        for (auto micro_f : f) {
+//            tags.push_back(micro_f.second);
+//        }
+//        gmsh::model::addPhysicalGroup(dim, tags);
+//        stringstream f_name;
+//        f_name << "fracture_" << c;
+//        std::string name = f_name.str();
+//        gmsh::model::setPhysicalName(dim, c_p_tag, name);
+//        c++;
+//        c_p_tag++;
+//    }
     
 
 //    /// Meshing constrols

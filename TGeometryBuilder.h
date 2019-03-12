@@ -12,13 +12,15 @@
 #include <iostream>
 #include <fstream>
 #include <sstream> 
+#include <map>
 #include <cmath>
 #include <thread>
 #include "gmsh.h"
 
+
 class TGeometryBuilder {
     
-private:
+public:
     
     /// Vector of points of the internal wire
     std::vector<std::vector<double>> m_internal_wire_pts;
@@ -59,8 +61,17 @@ private:
     /// Vector of fracture points
     std::vector<int> m_fracture_point_tags;
     
-    /// Entity tag for the wellbore region
-    int m_wellbore_region_tag;
+    /// Vector of base fracture curves
+    std::vector<int> m_base_fracture_curve_tags;
+    
+    /// Map of base fracture curve tag to subfracture curve tags
+    std::map<int, std::vector<int> > m_fracture_curve_tags;
+    
+    /// Entity tag for the wellbore region and boundaries
+    std::vector<int>  m_wellbore_region_tags;
+    
+    /// Physical tag for the wellbore region and boundaries
+    std::vector<int>  m_wellbore_region_physical_tags;
     
     /// Load the user-defined points (x,y,z)
     std::vector<std::vector<double>> LoadPoints(std::string & file_name, int n_data);
@@ -85,6 +96,16 @@ private:
 
     /// Draw a rectangle points with with x_mix coordinate and x_max coordinate
     void DrawRectanglePoints(std::vector<double> x_mix, std::vector<double> x_max, std::vector<std::vector<double>> & points);
+    
+    /// Draw the DFN add points and 1D fractures
+    void DrawDFN();
+    
+    /// Computes the intersection between two fractures and return false when the intersection is empty.
+    bool IntersectFractures(int object_tag, int tool_tag, std::vector<gmsh::vectorpair> & map_dim_tags);
+    
+    bool ComputeFracturesIntersections(std::map<int,std::vector<int>> & objects, std::map<int,std::vector<int>>& tools, std::map<int,std::vector<int>>  & fractures);
+    
+    std::vector<int> ComputeAssociatedMicroFractures(std::pair<int,std::vector<int>> & fracture_data,std::map<int,std::vector<int>>  & fractures);
     
 public:
     
@@ -122,10 +143,10 @@ public:
     void DrawExternalRectangle(std::vector<double> x_mix, std::vector<double> x_max);
     
     /// Draw a wellbore region domain based on the internal and external wires
-    int DrawWellboreRegion();
+    void DrawWellboreRegion();
     
     /// Compute reservoir physical tags (domain and boundaries)
-    std::vector<int> ComputeReservoirPhysicalTags();
+    void ComputeReservoirPhysicalTags();
     
 };
 

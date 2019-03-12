@@ -121,17 +121,250 @@ void TGeometryBuilder::BuildInternalPoints(){
     
 }
 
-void TGeometryBuilder::BuildDFN(){
+void TGeometryBuilder::DrawDFN(){
     
     int n_point = m_fracture_pts.size();
+    
+    if (n_point <= 1) { /// No DFN is generated
+        return;
+    }
+    
+    bool even_number_Q = n_point % 2 == 0;
+    if (!even_number_Q){
+        std::cout << "TGeometryBuilder:: Odd fracture points, the last point is ignored." <<std::endl;
+        m_fracture_pts.resize(n_point-1);
+        n_point = m_fracture_pts.size();
+    }
+    
     for (int ip = 0; ip < n_point; ip++) {
         
-        std::vector<double> point = m_internal_pts[ip];
+        std::vector<double> point = m_fracture_pts[ip];
         double x = point[0];
         double y = point[1];
         double z = point[2];
         int point_tag = gmsh::model::occ::addPoint(x, y, z);
         m_base_fracture_point_tags.push_back(point_tag);
+    }
+    
+    int n_point_tag = m_base_fracture_point_tags.size();
+    for (int i_tag = 0; i_tag < n_point_tag - 1; i_tag += 2) {
+        int ini_tag = m_base_fracture_point_tags[i_tag];
+        int end_tag = m_base_fracture_point_tags[i_tag+1];
+        int curve_tag = gmsh::model::occ::addLine(ini_tag, end_tag);
+        m_base_fracture_curve_tags.push_back(curve_tag);
+    }
+    
+}
+
+void TGeometryBuilder::BuildDFN(){
+    
+    DrawDFN();
+    gmsh::model::occ::synchronize();
+    int n_point = m_fracture_pts.size();
+    if (n_point <= 1) { /// No DFN is generated
+        return;
+    }
+    
+    int n_fractures = m_base_fracture_curve_tags.size();
+    int n_objects = n_fractures/2;
+    std::map<int,std::vector<int>> fractures;
+    std::map<int,std::vector<int>> objects;
+    std::map<int,std::vector<int>> tools;
+    
+    std::pair<int, std::vector<int> > chunk_tag_sub_tag;
+    chunk_tag_sub_tag.second.resize(1);
+    for (auto f: m_base_fracture_curve_tags) {
+        chunk_tag_sub_tag.first = f;
+        chunk_tag_sub_tag.second[0] = f;
+        fractures.insert(chunk_tag_sub_tag);
+        objects.insert(chunk_tag_sub_tag);
+        tools.insert(chunk_tag_sub_tag);
+        m_fracture_curve_tags.insert(chunk_tag_sub_tag);
+    }
+    
+//    for (int i = 0; i < n_objects; i++) {
+//        chunk_tag_sub_tag.first = m_base_fracture_curve_tags[i];
+//        chunk_tag_sub_tag.second[0] = m_base_fracture_curve_tags[i];
+//        objects.insert(chunk_tag_sub_tag);
+//    }
+//    for (int i = n_objects; i < n_fractures; i++) {
+//        chunk_tag_sub_tag.first = m_base_fracture_curve_tags[i];
+//        chunk_tag_sub_tag.second[0] = m_base_fracture_curve_tags[i];
+//        tools.insert(chunk_tag_sub_tag);
+//    }
+    
+    bool there_are_intersections_Q = true;
+    while (there_are_intersections_Q) {
+        there_are_intersections_Q = ComputeFracturesIntersections(objects, tools, fractures);
+    }
+    
+    chunk_tag_sub_tag.second.resize(0);
+    /// Computing physical tag for fractures by group
+    std::map<int,std::vector<int>> fractures_to_micro;
+    for (auto f : m_fracture_curve_tags) {
+        /// compute micro fractures
+        chunk_tag_sub_tag = f;
+        chunk_tag_sub_tag.second = ComputeAssociatedMicroFractures(chunk_tag_sub_tag, fractures);
+        chunk_tag_sub_tag.first = f.first;
+        fractures_to_micro.insert(chunk_tag_sub_tag);
+        
+    }
+    m_fracture_curve_tags = fractures_to_micro; /// updating the micro fractures
+    
+    {
+        int c_p_tag;
+        int domain_tags = m_wellbore_region_tags.size();
+        if (domain_tags == 0) {
+            c_p_tag = 1;
+        }else{
+            c_p_tag = m_wellbore_region_tags[2]+1;
+        }
+        
+        /// Functional physical tag for fractures
+        int c = 1;
+        int dim = 1;
+        for (auto f : m_fracture_curve_tags) {
+            std::vector<int> tags;
+            for (auto micro_f : f.second) {
+                tags.push_back(micro_f);
+            }
+            gmsh::model::addPhysicalGroup(dim, tags);
+            std::stringstream f_name;
+            f_name << "fracture_" << c;
+            std::string name = f_name.str();
+            gmsh::model::setPhysicalName(dim, c_p_tag, name);
+            c++;
+            c_p_tag++;
+        }
+    }
+    
+}
+
+std::vector<int> TGeometryBuilder::ComputeAssociatedMicroFractures(std::pair<int,std::vector<int>> & fracture_data,std::map<int,std::vector<int>>  & fractures){
+
+    std::vector<int> micro_fractures;
+    std::pair<int,std::vector<int>> fracture = fracture_data;
+    std::map<int,std::vector<int>>::iterator it;
+    
+    for (auto tag: fracture.second) {
+        
+        it = fractures.find(tag);
+        bool is_member_Q = it != fractures.end();
+        int n_micro_fractures = it->second.size();
+        bool has_micro_fractures_Q = n_micro_fractures > 1;
+        if (is_member_Q && has_micro_fractures_Q) {
+            std::pair<int,std::vector<int>> fracture;
+            fracture.first = it->first;
+            fracture.second = it->second;
+            std::vector<int> sub_micro_fractures = ComputeAssociatedMicroFractures(fracture, fractures);
+            for (auto k : sub_micro_fractures) {
+                micro_fractures.push_back(k);
+            }
+            
+        }
+        else{
+            int micro_fracture_tag = it->second[0];
+            micro_fractures.push_back(micro_fracture_tag);
+        }
+    }
+
+    return micro_fractures;
+}
+
+bool TGeometryBuilder::ComputeFracturesIntersections(std::map<int,std::vector<int>> & objects, std::map<int,std::vector<int>>& tools, std::map<int,std::vector<int>>  & fractures){
+    
+    bool there_is_intersection_Q = false;
+    std::pair<int, std::vector<int> > chunk_tag_sub_tag;
+    for (auto object : objects) {
+        for (auto tool: tools) {
+            std::vector<gmsh::vectorpair> map_dim_tags;
+            there_is_intersection_Q = IntersectFractures(object.first, tool.first, map_dim_tags);
+            if (there_is_intersection_Q && (object.first != tool.first)) { /// required deletion and expansion for both vectors
+                
+                /// dropout object and tool on objects vector
+                objects.erase(object.first);
+                objects.erase(tool.first);
+                /// dropout object and tool on tools vector
+                tools.erase(tool.first);
+                tools.erase(object.first);
+                
+                /// adjusting objects structure
+                {
+
+                    
+                    /// Appending new micro fractures associated to the object
+                    chunk_tag_sub_tag.first = object.first;
+                    chunk_tag_sub_tag.second.resize(0);
+                    for (auto micro_f: map_dim_tags[0]) { /// Associated to the object
+                        chunk_tag_sub_tag.second.push_back(micro_f.second);
+                    }
+                    fractures.erase(object.first);
+                    fractures.insert(chunk_tag_sub_tag);
+                    
+                    /// Appending new fractures
+                    for (auto micro_f: map_dim_tags[0]) { /// Asspciated to the object
+                        chunk_tag_sub_tag.second.resize(0);
+                        chunk_tag_sub_tag.first = micro_f.second;
+                        chunk_tag_sub_tag.second.push_back(micro_f.second);
+                        fractures.insert(chunk_tag_sub_tag);
+                        objects.insert(chunk_tag_sub_tag);
+                    }
+                    
+                }
+                
+                /// adjusting tools structure
+                {
+                    
+                    /// Appending new micro fractures associated to the object
+                    chunk_tag_sub_tag.first = tool.first;
+                    chunk_tag_sub_tag.second.resize(0);
+                    for (auto micro_f: map_dim_tags[1]) { /// Associated to the tool
+                        chunk_tag_sub_tag.second.push_back(micro_f.second);
+                    }
+                    fractures.erase(tool.first);
+                    fractures.insert(chunk_tag_sub_tag);
+                    
+                    /// Appending new fractures
+                    for (auto micro_f: map_dim_tags[1]) { /// Asspciated to the object
+                        chunk_tag_sub_tag.second.resize(0);
+                        chunk_tag_sub_tag.first = micro_f.second;
+                        chunk_tag_sub_tag.second.push_back(micro_f.second);
+                        fractures.insert(chunk_tag_sub_tag);
+                        tools.insert(chunk_tag_sub_tag);
+                    }
+                    
+                }
+                return there_is_intersection_Q;
+                break;
+            }
+            else{
+                int nothing_to_do = 0;
+            }
+        }
+    }
+    
+    return there_is_intersection_Q;
+    
+}
+
+bool TGeometryBuilder::IntersectFractures(int object_tag, int tool_tag, std::vector<gmsh::vectorpair> & map_dim_tags){
+    
+    if (object_tag == tool_tag ) { // there is nothing to do for this case.
+        return true;
+    }
+    
+    gmsh::vectorpair dim_tag_object;
+    dim_tag_object.push_back(std::make_pair(1, object_tag));
+    gmsh::vectorpair dim_tag_tool;
+    dim_tag_tool.push_back(std::make_pair(1, tool_tag));
+    gmsh::vectorpair outDimTags;
+    gmsh::model::occ::fragment(dim_tag_object, dim_tag_tool, outDimTags, map_dim_tags);
+    gmsh::model::occ::synchronize(); /// expensive
+    int n_data = outDimTags.size();
+    if (n_data == 2) {
+        return false;
+    }else{
+        return true;
     }
     
 }
@@ -297,31 +530,29 @@ void TGeometryBuilder::DrawExternalRectangle(std::vector<double> x_mix, std::vec
     
 }
 
-int TGeometryBuilder::DrawWellboreRegion(){
+void TGeometryBuilder::DrawWellboreRegion(){
  
     /// construction by already defined wires    
     std::vector<int> wire_tags;
     wire_tags.push_back(m_internal_wire_curve_loop);
     wire_tags.push_back(m_external_wire_curve_loop);
     int wellbore_region_tag = gmsh::model::occ::addPlaneSurface(wire_tags);
-    m_wellbore_region_tag = wellbore_region_tag;
-    return wellbore_region_tag;
+    m_wellbore_region_tags.push_back(wellbore_region_tag);
 }
 
-std::vector<int> TGeometryBuilder::ComputeReservoirPhysicalTags(){
+void TGeometryBuilder::ComputeReservoirPhysicalTags(){
     
-    std::vector<int> reservoir_physical_tags;
-    
+    int wellbore_tag = m_wellbore_region_tags[0];
     int c_p_tag = 1;
     int dim = 2;
     std::vector<int> tags;
-    tags.push_back(m_wellbore_region_tag);
+    tags.push_back(wellbore_tag);
     gmsh::model::addPhysicalGroup(dim, tags);
     std::stringstream f_name;
     f_name << "reservoir";
     std::string name = f_name.str();
     gmsh::model::setPhysicalName(dim, c_p_tag, name);
-    reservoir_physical_tags.push_back(c_p_tag);
+    m_wellbore_region_physical_tags.push_back(c_p_tag);
     c_p_tag++;
     
     /// Physical tag for computational boundaries
@@ -332,7 +563,7 @@ std::vector<int> TGeometryBuilder::ComputeReservoirPhysicalTags(){
         s_bc_name << "bc_internal";
         std::string bc_name = s_bc_name.str();
         gmsh::model::setPhysicalName(dim, c_p_tag, bc_name);
-        reservoir_physical_tags.push_back(c_p_tag);
+        m_wellbore_region_physical_tags.push_back(c_p_tag);
         c_p_tag++;
     }
     
@@ -342,8 +573,7 @@ std::vector<int> TGeometryBuilder::ComputeReservoirPhysicalTags(){
         s_bc_name << "bc_external";
         std::string bc_name = s_bc_name.str();
         gmsh::model::setPhysicalName(dim, c_p_tag, bc_name);
-        reservoir_physical_tags.push_back(c_p_tag);
+        m_wellbore_region_physical_tags.push_back(c_p_tag);
         c_p_tag++;
     }
-    return reservoir_physical_tags;
 }
