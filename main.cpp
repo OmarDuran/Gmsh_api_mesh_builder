@@ -68,6 +68,7 @@ void Wellbore_2D_with_factures(){
     gmsh::model::occ::synchronize();
     
     std::vector<double> x_center = {1.25, 1.0, 0.0};
+//    std::vector<double> x_center = {0.0, 0.0, 0.0};
     geo_builder.DrawInternalCricle(r_w, x_center);
     geo_builder.DrawExternalCricle(r, x_center);
     geo_builder.DrawWellboreRegion();

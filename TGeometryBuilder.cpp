@@ -204,11 +204,11 @@ void TGeometryBuilder::DrawDFN(){
 void TGeometryBuilder::ComputeDFNPhysicalTags(){
     
     int c_p_tag;
-    int domain_tags = m_wellbore_region_tags.size();
+    int domain_tags = m_wellbore_region_physical_tags.size();
     if (domain_tags == 0) {
         c_p_tag = 1;
     }else{
-        c_p_tag = m_wellbore_region_tags[2]+1;
+        c_p_tag = m_wellbore_region_physical_tags[2]+1;
     }
     
     /// Functional physical tag for fractures
@@ -284,7 +284,8 @@ bool TGeometryBuilder::ComputeFracturesIntersections(std::map<int,std::vector<in
         for (auto tool: tools) {
             std::vector<gmsh::vectorpair> map_dim_tags;
             there_is_intersection_Q = IntersectFractures(object.first, tool.first, map_dim_tags);
-            if (there_is_intersection_Q && (object.first != tool.first)) { /// required deletion and expansion for both vectors
+            bool are_not_the_same_fractures_Q = (object.first != tool.first);
+            if (there_is_intersection_Q && are_not_the_same_fractures_Q) { /// required deletion and expansion for both vectors
                 
                 /// dropout object and tool on objects vector
                 objects.erase(object.first);
@@ -296,7 +297,6 @@ bool TGeometryBuilder::ComputeFracturesIntersections(std::map<int,std::vector<in
                 /// adjusting objects structure
                 {
 
-                    
                     /// Appending new micro fractures associated to the object
                     chunk_tag_sub_tag.first = object.first;
                     chunk_tag_sub_tag.second.resize(0);
@@ -308,11 +308,12 @@ bool TGeometryBuilder::ComputeFracturesIntersections(std::map<int,std::vector<in
                     
                     /// Appending new fractures
                     for (auto micro_f: map_dim_tags[0]) { /// Asspciated to the object
-                        chunk_tag_sub_tag.second.resize(0);
                         chunk_tag_sub_tag.first = micro_f.second;
+                        chunk_tag_sub_tag.second.resize(0);
                         chunk_tag_sub_tag.second.push_back(micro_f.second);
                         fractures.insert(chunk_tag_sub_tag);
                         objects.insert(chunk_tag_sub_tag);
+                        tools.insert(chunk_tag_sub_tag);
                     }
                     
                 }
@@ -331,10 +332,11 @@ bool TGeometryBuilder::ComputeFracturesIntersections(std::map<int,std::vector<in
                     
                     /// Appending new fractures
                     for (auto micro_f: map_dim_tags[1]) { /// Asspciated to the object
-                        chunk_tag_sub_tag.second.resize(0);
                         chunk_tag_sub_tag.first = micro_f.second;
+                        chunk_tag_sub_tag.second.resize(0);
                         chunk_tag_sub_tag.second.push_back(micro_f.second);
                         fractures.insert(chunk_tag_sub_tag);
+                        objects.insert(chunk_tag_sub_tag);
                         tools.insert(chunk_tag_sub_tag);
                     }
                     
@@ -343,9 +345,29 @@ bool TGeometryBuilder::ComputeFracturesIntersections(std::map<int,std::vector<in
                 break;
             }
             else{
-                int nothing_to_do = 0;
+                int n_objects = objects.size();
+                int n_tools = tools.size();
+                if(n_objects == n_tools && n_tools == 1 && !are_not_the_same_fractures_Q){
+                    /// dropout object on objects vector
+                    objects.erase(object.first);
+                    /// dropout object on tools vector
+                    tools.erase(object.first);
+                    return true;
+                    break;
+                }
             }
+        
         }
+        
+        if (!there_is_intersection_Q) { /// Isolated fracture
+            /// dropout object on objects vector
+            objects.erase(object.first);
+            /// dropout object on tools vector
+            tools.erase(object.first);
+            return true;
+            break;
+        }
+
     }
     
     return there_is_intersection_Q;
