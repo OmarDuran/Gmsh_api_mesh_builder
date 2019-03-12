@@ -97,8 +97,8 @@ public:
     /// Draw a rectangle points with with x_mix coordinate and x_max coordinate
     void DrawRectanglePoints(std::vector<double> x_mix, std::vector<double> x_max, std::vector<std::vector<double>> & points);
     
-    /// Draw the DFN add points and 1D fractures
-    void DrawDFN();
+    /// Draw points and DFN's base fractures 
+    void DrawBaseFractures();
     
     /// Computes the intersection between two fractures and return false when the intersection is empty.
     bool IntersectFractures(int object_tag, int tool_tag, std::vector<gmsh::vectorpair> & map_dim_tags);
@@ -147,6 +147,15 @@ public:
     
     /// Compute reservoir physical tags (domain and boundaries)
     void ComputeReservoirPhysicalTags();
+    
+    /// Draws a computable DFN
+    void DrawDFN();
+    
+    /// Compute DFN physical tags (fractures and end points)
+    void ComputeDFNPhysicalTags();
+    
+    /// Embed the DFN inside reservoir
+    void EmbedDFNInsideReservoir();
     
 };
 

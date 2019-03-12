@@ -121,7 +121,7 @@ void TGeometryBuilder::BuildInternalPoints(){
     
 }
 
-void TGeometryBuilder::DrawDFN(){
+void TGeometryBuilder::DrawBaseFractures(){
     
     int n_point = m_fracture_pts.size();
     
@@ -156,17 +156,15 @@ void TGeometryBuilder::DrawDFN(){
     
 }
 
-void TGeometryBuilder::BuildDFN(){
+void TGeometryBuilder::DrawDFN(){
     
-    DrawDFN();
+    DrawBaseFractures();
     gmsh::model::occ::synchronize();
     int n_point = m_fracture_pts.size();
     if (n_point <= 1) { /// No DFN is generated
         return;
     }
     
-    int n_fractures = m_base_fracture_curve_tags.size();
-    int n_objects = n_fractures/2;
     std::map<int,std::vector<int>> fractures;
     std::map<int,std::vector<int>> objects;
     std::map<int,std::vector<int>> tools;
@@ -181,17 +179,6 @@ void TGeometryBuilder::BuildDFN(){
         tools.insert(chunk_tag_sub_tag);
         m_fracture_curve_tags.insert(chunk_tag_sub_tag);
     }
-    
-//    for (int i = 0; i < n_objects; i++) {
-//        chunk_tag_sub_tag.first = m_base_fracture_curve_tags[i];
-//        chunk_tag_sub_tag.second[0] = m_base_fracture_curve_tags[i];
-//        objects.insert(chunk_tag_sub_tag);
-//    }
-//    for (int i = n_objects; i < n_fractures; i++) {
-//        chunk_tag_sub_tag.first = m_base_fracture_curve_tags[i];
-//        chunk_tag_sub_tag.second[0] = m_base_fracture_curve_tags[i];
-//        tools.insert(chunk_tag_sub_tag);
-//    }
     
     bool there_are_intersections_Q = true;
     while (there_are_intersections_Q) {
@@ -211,33 +198,51 @@ void TGeometryBuilder::BuildDFN(){
     }
     m_fracture_curve_tags = fractures_to_micro; /// updating the micro fractures
     
-    {
-        int c_p_tag;
-        int domain_tags = m_wellbore_region_tags.size();
-        if (domain_tags == 0) {
-            c_p_tag = 1;
-        }else{
-            c_p_tag = m_wellbore_region_tags[2]+1;
-        }
-        
-        /// Functional physical tag for fractures
-        int c = 1;
-        int dim = 1;
-        for (auto f : m_fracture_curve_tags) {
-            std::vector<int> tags;
-            for (auto micro_f : f.second) {
-                tags.push_back(micro_f);
-            }
-            gmsh::model::addPhysicalGroup(dim, tags);
-            std::stringstream f_name;
-            f_name << "fracture_" << c;
-            std::string name = f_name.str();
-            gmsh::model::setPhysicalName(dim, c_p_tag, name);
-            c++;
-            c_p_tag++;
-        }
+}
+
+/// Compute DFN physical tags (fractures and end points)
+void TGeometryBuilder::ComputeDFNPhysicalTags(){
+    
+    int c_p_tag;
+    int domain_tags = m_wellbore_region_tags.size();
+    if (domain_tags == 0) {
+        c_p_tag = 1;
+    }else{
+        c_p_tag = m_wellbore_region_tags[2]+1;
     }
     
+    /// Functional physical tag for fractures
+    int c = 1;
+    int dim = 1;
+    for (auto f : m_fracture_curve_tags) {
+        std::vector<int> tags;
+        for (auto micro_f : f.second) {
+            tags.push_back(micro_f);
+        }
+        gmsh::model::addPhysicalGroup(dim, tags);
+        std::stringstream f_name;
+        f_name << "fracture_" << c;
+        std::string name = f_name.str();
+        gmsh::model::setPhysicalName(dim, c_p_tag, name);
+        c++;
+        c_p_tag++;
+    }
+}
+
+void TGeometryBuilder::EmbedDFNInsideReservoir(){
+    
+    int domain_tags = m_wellbore_region_tags.size();
+    if (domain_tags == 0) {
+        return;
+    }
+    int domain_tag = m_wellbore_region_tags[0];
+    std::vector<int> fractures_tags;
+    for (auto f : m_fracture_curve_tags) {
+        for (auto micro_f : f.second) {
+            fractures_tags.push_back(micro_f);
+        }
+    }
+    gmsh::model::mesh::embed(1,fractures_tags,2,domain_tag);
 }
 
 std::vector<int> TGeometryBuilder::ComputeAssociatedMicroFractures(std::pair<int,std::vector<int>> & fracture_data,std::map<int,std::vector<int>>  & fractures){
@@ -376,23 +381,23 @@ void TGeometryBuilder::DrawCirclePoints(double r, std::vector<double> x_center, 
     points.push_back(point);
     
     // p1
-    point[0] = r;
-    point[1] = 0;
+    point[0] = r + x_center[0];
+    point[1] = 0 + x_center[1];
     points.push_back(point);
     
     // p2
-    point[0] = 0;
-    point[1] = r;
+    point[0] = 0 + x_center[0];
+    point[1] = r + x_center[1];
     points.push_back(point);
     
     // p3
-    point[0] = -r;
-    point[1] = 0;
+    point[0] = -r + x_center[0];
+    point[1] = +0 + x_center[1];
     points.push_back(point);
     
     // p4
-    point[0] = 0;
-    point[1] = -r;
+    point[0] = +0 + x_center[0];
+    point[1] = -r + x_center[1];
     points.push_back(point);
     
 }

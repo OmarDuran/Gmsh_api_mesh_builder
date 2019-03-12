@@ -77,14 +77,15 @@ void Wellbore_2D_with_factures(){
 
     TGeometryBuilder geo_builder;
     std::string file_name = "dfn.txt";
-    int n_data = 20;
+    int n_data = 20; // 10 fractures
     geo_builder.LoadDiscreteFractureNetwork(file_name, n_data);
-    geo_builder.BuildDFN();
+    geo_builder.DrawDFN();
     
     gmsh::model::occ::synchronize();
-    std::vector<double> x_center(3,0);
-//    geo_builder.DrawInternalCricle(r_w, x_center);
-//    geo_builder.DrawExternalCricle(r, x_center);
+    std::vector<double> x_center = {1.25, 1.0, 0.0};
+//    std::vector<double> x_center = {0, 0.0, 0.0};
+    geo_builder.DrawInternalCricle(r_w, x_center);
+    geo_builder.DrawExternalCricle(r, x_center);
 //    std::vector<double> x_mix(3,0);
 //    std::vector<double> x_max(3,0);
 //    x_mix[0] = -4.0;
@@ -93,52 +94,14 @@ void Wellbore_2D_with_factures(){
 //    x_max[1] = +4.0;
 //    geo_builder.DrawExternalRectangle(x_mix, x_max);
     
-//    geo_builder.DrawWellboreRegion();
-//    int domain_area = geo_builder.m_wellbore_region_tags[0];
-    
-//    /// construction by already defined wires
-//    std::vector<int> res_curve_tags;
-//    for (auto i: curve_external_tags) {
-//        res_curve_tags.push_back(i);
-//    }
-//    for (auto i: curve_internal_tags) {
-//        res_curve_tags.push_back(i);
-//    }
-
-    
-//    /// Embed fractures on computational domain
-//    gmsh::model::occ::synchronize();
-//    std::vector<int> fractures;
-//    for (auto i: outDimTags) {
-//        fractures.push_back(i.second);
-//    }
-//    gmsh::model::mesh::embed(1,fractures,2,domain_area);
-    
+    geo_builder.DrawWellboreRegion();
     gmsh::model::occ::synchronize();
+
     /// Physical tag
+    geo_builder.ComputeReservoirPhysicalTags();
+    geo_builder.ComputeDFNPhysicalTags();
     
-//    std::vector<int> res_physical_tags;
-//    geo_builder.ComputeReservoirPhysicalTags();
-//    res_physical_tags = geo_builder.m_wellbore_region_physical_tags;
-    
-//    int c_p_tag = res_physical_tags[2]+1;
-//    /// Functional physical tag for fractures
-//    int c = 1;
-//    for (auto f : outDimTagsMap) {
-//        int dim = f[0].first;
-//        std::vector<int> tags;
-//        for (auto micro_f : f) {
-//            tags.push_back(micro_f.second);
-//        }
-//        gmsh::model::addPhysicalGroup(dim, tags);
-//        stringstream f_name;
-//        f_name << "fracture_" << c;
-//        std::string name = f_name.str();
-//        gmsh::model::setPhysicalName(dim, c_p_tag, name);
-//        c++;
-//        c_p_tag++;
-//    }
-    
+    geo_builder.EmbedDFNInsideReservoir();
 
 //    /// Meshing constrols
 //    {
