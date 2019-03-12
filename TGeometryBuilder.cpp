@@ -165,19 +165,120 @@ void TGeometryBuilder::DrawDFN(){
         return;
     }
     
-//    {
-//        gmsh::vectorpair object, tool;
-//        for (auto f: m_base_fracture_curve_tags) {
-//            object.push_back(std::make_pair(1, f));
-//        }
-//        for (auto f: m_external_wire_curve_tags) {
-//            tool.push_back(std::make_pair(1, f));
-//        }
-//        gmsh::vectorpair out_dim_tags;
-//        std::vector<gmsh::vectorpair> dfn_bc_dim_tags;
-//        gmsh::model::occ::fragment(object, tool, out_dim_tags, dfn_bc_dim_tags);
-//
-//    }
+    /// construct the map of fracture tree curve tags
+    {
+        
+        for (auto bc: m_base_fracture_curve_tags) {
+            EntityBinaryTree bc_tree;
+            bc_tree.m_entity_tag = bc;
+            m_fracture_tree_tags.insert(std::make_pair(bc, bc_tree));
+        }
+        
+    }
+    
+    /// dfn and boundaries fragmentation
+    {
+        gmsh::vectorpair objects, tools;
+        for (auto f: m_base_fracture_curve_tags) {
+            objects.push_back(std::make_pair(1, f));
+        }
+        for (auto f: m_internal_wire_curve_tags) {
+            tools.push_back(std::make_pair(1, f));
+        }
+        for (auto f: m_external_wire_curve_tags) {
+            tools.push_back(std::make_pair(1, f));
+        }
+        gmsh::vectorpair out_dim_tags;
+        std::vector<gmsh::vectorpair> dfn_bc_dim_tags;
+        gmsh::model::occ::fragment(objects, tools, out_dim_tags, dfn_bc_dim_tags);
+        gmsh::model::occ::synchronize();
+        
+        int n_base_fracture = m_base_fracture_curve_tags.size();
+        int n_bc_internal   = m_internal_wire_curve_tags.size();
+        int n_bc_external   = m_external_wire_curve_tags.size();
+        
+        /// Update for fracture tree structure
+        for (int i = 0; i < n_base_fracture; i++) {
+            int fracture_tag = objects[i].second;
+            int n_data = dfn_bc_dim_tags[i].size();
+            if (n_data == 2) {
+                EntityBinaryTree left_tree, right_tree;
+                left_tree.m_entity_tag = dfn_bc_dim_tags[i][0].second;
+                right_tree.m_entity_tag = dfn_bc_dim_tags[i][1].second;
+                m_fracture_tree_tags[fracture_tag].m_left_fracture = &left_tree;
+                m_fracture_tree_tags[fracture_tag].m_right_fracture = &right_tree;
+            }
+        }
+        
+        /// Update for internal bc tree structure
+        int shift = n_base_fracture;
+        for (int i = 0; i < n_bc_internal; i++) {
+            int bc_tag = tools[i].second;
+            int n_data = dfn_bc_dim_tags[i+shift].size();
+            if (n_data == 2) {
+                EntityBinaryTree left_tree, right_tree;
+                left_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][0].second;
+                right_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][1].second;
+                m_internal_boundary_tree_tags[bc_tag].m_left_fracture = &left_tree;
+                m_internal_boundary_tree_tags[bc_tag].m_right_fracture = &right_tree;
+            }
+        }
+        
+        /// Update for external bc tree structure
+        shift = n_base_fracture + n_bc_internal;
+        for (int i = n_bc_internal; i < n_bc_internal + n_bc_external; i++) {
+            int bc_tag = tools[i+n_bc_internal].second;
+            int n_data = dfn_bc_dim_tags[i+shift].size();
+            if (n_data == 2) {
+                EntityBinaryTree left_tree, right_tree;
+                left_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][0].second;
+                right_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][1].second;
+                m_external_boundary_tree_tags[bc_tag].m_left_fracture = &left_tree;
+                m_external_boundary_tree_tags[bc_tag].m_right_fracture = &right_tree;
+            }
+        }
+        
+    }
+    
+    
+    {/// dfn and dfn fragmentation
+        
+        /// rebased m_base_fracture_curve_tags
+        m_base_fracture_curve_tags.clear();
+        for (auto chunk: m_fracture_tree_tags) {
+            
+            bool has_branches_Q = true;
+            EntityBinaryTree fracture_tree;
+            fracture_tree.m_entity_tag = chunk.second.m_entity_tag;
+            fracture_tree.m_left_fracture = chunk.second.m_left_fracture;
+            fracture_tree.m_right_fracture = chunk.second.m_right_fracture;
+            while (has_branches_Q) {
+                has_branches_Q = (fracture_tree.m_left_fracture) && (fracture_tree.m_right_fracture);
+                if (has_branches_Q) { /// left based shearch
+                    fracture_tree.m_entity_tag = fracture_tree.m_left_fracture->m_entity_tag;
+                    fracture_tree.m_left_fracture = fracture_tree.m_left_fracture->m_left_fracture;
+                    fracture_tree.m_right_fracture = fracture_tree.m_right_fracture->m_right_fracture;
+                }
+                else{
+                    m_base_fracture_curve_tags.push_back(fracture_tree.m_left_fracture->m_entity_tag);
+                    m_base_fracture_curve_tags.push_back(fracture_tree.m_right_fracture->m_entity_tag);
+                }
+            }
+            
+        }
+        
+        
+        gmsh::vectorpair objects, tools;
+        for (auto f: m_base_fracture_curve_tags) {
+            objects.push_back(std::make_pair(1, f));
+            tools.push_back(std::make_pair(1, f));
+        }
+        gmsh::vectorpair out_dim_tags;
+        std::vector<gmsh::vectorpair> dfn_bc_dim_tags;
+        gmsh::model::occ::fragment(objects, tools, out_dim_tags, dfn_bc_dim_tags);
+        gmsh::model::occ::synchronize();
+        
+    }
     
     /// DFN intersection with boundaries
 //    m_base_fracture_curve_tags.clear();
@@ -732,6 +833,22 @@ void TGeometryBuilder::DrawWellboreRegion(){
     wire_tags.push_back(m_external_wire_curve_loop);
     int wellbore_region_tag = gmsh::model::occ::addPlaneSurface(wire_tags);
     m_wellbore_region_tags.push_back(wellbore_region_tag);
+    
+    /// Construct the maps of internal and external boundary tree curve tags
+    {
+        for (auto bc: m_internal_wire_curve_tags) {
+            EntityBinaryTree bc_tree;
+            bc_tree.m_entity_tag = bc;
+            m_internal_boundary_tree_tags.insert(std::make_pair(bc, bc_tree));
+        }
+        
+        for (auto bc: m_external_wire_curve_tags) {
+            EntityBinaryTree bc_tree;
+            bc_tree.m_entity_tag = bc;
+            m_external_boundary_tree_tags.insert(std::make_pair(bc, bc_tree));
+        }
+    }
+    
 }
 
 void TGeometryBuilder::ComputeReservoirPhysicalTags(){

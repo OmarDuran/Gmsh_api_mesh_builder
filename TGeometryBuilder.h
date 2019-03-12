@@ -18,6 +18,55 @@
 #include "gmsh.h"
 
 
+/// structure to reconstruc base fracture and associated microfractures
+class EntityBinaryTree {
+    
+public:
+    
+    /// entity tag
+    int m_entity_tag = -1;
+    
+    /// Left fracture
+    EntityBinaryTree * m_left_fracture = nullptr;
+    
+    /// Right fracture
+    EntityBinaryTree * m_right_fracture = nullptr;
+    
+    /// Default constructo
+    EntityBinaryTree(){
+        m_entity_tag = -1;
+        m_left_fracture = nullptr;
+        m_right_fracture = nullptr;
+    }
+    
+    /// Constructor based on a new tag
+    EntityBinaryTree(int entity_tag){
+        m_entity_tag = entity_tag;
+        m_left_fracture = nullptr;
+        m_right_fracture = nullptr;
+    }
+    
+    /// Copy constructor
+    EntityBinaryTree(const EntityBinaryTree & other){
+        m_entity_tag        = other.m_entity_tag;
+        m_left_fracture     = other.m_left_fracture;
+        m_right_fracture    = other.m_right_fracture;
+    }
+    
+    /// Assignement constructor
+    const EntityBinaryTree & operator=(const EntityBinaryTree & other){
+        /// check for self-assignment
+        if(&other == this){
+            return *this;
+        }
+        m_entity_tag        = other.m_entity_tag;
+        m_left_fracture     = other.m_left_fracture;
+        m_right_fracture    = other.m_right_fracture;
+        return *this;
+    }
+    
+};
+
 class TGeometryBuilder {
     
 public:
@@ -69,6 +118,15 @@ public:
     
     /// Map of base fracture curve tag to subfracture curve tags
     std::map<int, std::vector<int> > m_fracture_curve_tags;
+    
+    /// Map of internal boundary tree curve tags
+    std::map<int, EntityBinaryTree > m_internal_boundary_tree_tags;
+    
+    /// Map of external boundary tree curve tags
+    std::map<int, EntityBinaryTree > m_external_boundary_tree_tags;
+    
+    /// Map of fracture tree curve tags
+    std::map<int, EntityBinaryTree > m_fracture_tree_tags;
     
     /// Entity tag for the wellbore region and boundaries
     std::vector<int>  m_wellbore_region_tags;
