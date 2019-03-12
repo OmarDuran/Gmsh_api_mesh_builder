@@ -165,19 +165,19 @@ void TGeometryBuilder::DrawDFN(){
         return;
     }
     
-    {
-        gmsh::vectorpair object, tool;
-        for (auto f: m_base_fracture_curve_tags) {
-            object.push_back(std::make_pair(1, f));
-        }
-        for (auto f: m_external_wire_curve_tags) {
-            tool.push_back(std::make_pair(1, f));
-        }
-        gmsh::vectorpair outDimTags;
-        std::vector<gmsh::vectorpair> outDimTagsMap;
-        gmsh::model::occ::fragment(object, tool, outDimTags, outDimTagsMap);
-        int aka  = 0;
-    }
+//    {
+//        gmsh::vectorpair object, tool;
+//        for (auto f: m_base_fracture_curve_tags) {
+//            object.push_back(std::make_pair(1, f));
+//        }
+//        for (auto f: m_external_wire_curve_tags) {
+//            tool.push_back(std::make_pair(1, f));
+//        }
+//        gmsh::vectorpair out_dim_tags;
+//        std::vector<gmsh::vectorpair> dfn_bc_dim_tags;
+//        gmsh::model::occ::fragment(object, tool, out_dim_tags, dfn_bc_dim_tags);
+//
+//    }
     
     /// DFN intersection with boundaries
 //    m_base_fracture_curve_tags.clear();
