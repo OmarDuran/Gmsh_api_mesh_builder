@@ -53,56 +53,38 @@ void Wellbore_2D_with_factures(){
     gmsh::option::setNumber("Mesh.CharacteristicLengthMin", 0.1*r_w);
     gmsh::option::setNumber("Mesh.CharacteristicLengthMax", r);
     
-    
-//    /// Construction for fractures intersections
-//    int f1pt_i = gmsh::model::occ::addPoint(0.25,0,0);
-//    int f1pt_e = gmsh::model::occ::addPoint(1.5,1,0);
-//
-//    int f2pt_i = gmsh::model::occ::addPoint(1.0,1,0);
-//    int f2pt_e = gmsh::model::occ::addPoint(1.25,-0.5,0);
-//
-//    int f1 = gmsh::model::occ::addLine(f1pt_i, f1pt_e);
-//    int f2 = gmsh::model::occ::addLine(f2pt_i, f2pt_e);
-//
-//    gmsh::vectorpair dim_tag_object;
-//    dim_tag_object.push_back(std::make_pair(1, f1));
-//    gmsh::vectorpair dim_tag_tool;
-//    dim_tag_tool.push_back(std::make_pair(1, f2));
-//    gmsh::vectorpair outDimTags;
-//    std::vector<gmsh::vectorpair> outDimTagsMap;
-//    gmsh::model::occ::fragment(dim_tag_object, dim_tag_tool, outDimTags, outDimTagsMap);
-    
     /// Construction for computational domain
     /// The domain is constructed by a boolean operation
 
     TGeometryBuilder geo_builder;
-    std::string file_name = "dfn.txt";
-    int n_data = 20; // 10 fractures
-    geo_builder.LoadDiscreteFractureNetwork(file_name, n_data);
-    geo_builder.DrawDFN();
     
+    /// Load DFN
+    int n_data = 20; // 10 fractures
+    std::string file_name = "dfn.txt";
+    geo_builder.LoadDiscreteFractureNetwork(file_name, n_data);
+    
+    /// Draws DFN
+    geo_builder.DrawDFN();
     gmsh::model::occ::synchronize();
+    
     std::vector<double> x_center = {1.25, 1.0, 0.0};
-//    std::vector<double> x_center = {0, 0.0, 0.0};
     geo_builder.DrawInternalCricle(r_w, x_center);
     geo_builder.DrawExternalCricle(r, x_center);
-//    std::vector<double> x_mix(3,0);
-//    std::vector<double> x_max(3,0);
-//    x_mix[0] = -4.0;
-//    x_mix[1] = -4.0;
-//    x_max[0] = +4.0;
-//    x_max[1] = +4.0;
-//    geo_builder.DrawExternalRectangle(x_mix, x_max);
-    
     geo_builder.DrawWellboreRegion();
     gmsh::model::occ::synchronize();
 
     /// Physical tag
     geo_builder.ComputeReservoirPhysicalTags();
     geo_builder.ComputeDFNPhysicalTags();
-    
     geo_builder.EmbedDFNInsideReservoir();
 
+    /// Meshing constrols
+    int n_points = 10;
+    geo_builder.RefineWellboreElements(n_points);
+    double omega = 0.95;
+    double size_ratio = 0.9;
+    geo_builder.RefineDFN(omega,size_ratio);
+    
 //    /// Meshing constrols
 //    {
 //        int n_nodes = 10;

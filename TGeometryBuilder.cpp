@@ -582,3 +582,64 @@ void TGeometryBuilder::ComputeReservoirPhysicalTags(){
         c_p_tag++;
     }
 }
+
+
+/// Divide wellbore boundary into n_points + 1 elements
+void TGeometryBuilder::RefineWellboreElements(int n_points){
+    for (auto bc: m_internal_wire_curve_tags) {
+        gmsh::model::mesh::setTransfiniteCurve(bc, n_points);
+    }
+}
+
+void TGeometryBuilder::RefineDFN(double omega, double size_ratio){
+    
+    const int dim = 1;
+    /// Computing minimun fracture size
+    double min_size = 183729;
+    double max_size = 0.0;
+    for (auto f : m_fracture_curve_tags) {
+        for (auto micro_f : f.second) {
+            double xmin,ymin,zmin;
+            double xmax,ymax,zmax;
+            gmsh::model::getBoundingBox(dim, micro_f, xmin, ymin, zmin, xmax, ymax, zmax);
+            double squared_norm = (xmin-xmax)*(xmin-xmax)+(ymin-ymax)*(ymin-ymax)+(zmin-zmax)*(zmin-zmax);
+            double norm = sqrt(squared_norm);
+            if (norm <= min_size) {
+                min_size = norm;
+            }
+            if (norm > max_size) {
+                max_size = norm;
+            }
+        }
+    }
+    
+    double avg_scale = (1.0 - omega) * max_size - omega * min_size;
+    
+    std::map<int,int> fracture_tag_n_points;
+    for (auto f : m_fracture_curve_tags) {
+        for (auto micro_f : f.second) {
+            double xmin,ymin,zmin;
+            double xmax,ymax,zmax;
+            gmsh::model::getBoundingBox(dim, micro_f, xmin, ymin, zmin, xmax, ymax, zmax);
+            double squared_norm = (xmin-xmax)*(xmin-xmax)+(ymin-ymax)*(ymin-ymax)+(zmin-zmax)*(zmin-zmax);
+            double norm = sqrt(squared_norm);
+            double ratio = norm / avg_scale;
+            int n_points = floor(ratio);
+            if (n_points == 0) {
+                n_points = 2;
+            }
+            double max_size_ratio = norm / max_size;
+            if (size_ratio > max_size_ratio) {
+                fracture_tag_n_points.insert(std::make_pair(micro_f, n_points));
+            }
+        }
+    }
+    
+    for (auto f_data: fracture_tag_n_points) {
+        int fracture_tag = f_data.first;
+        int n_points = f_data.second;
+        gmsh::model::mesh::setTransfiniteCurve(fracture_tag, n_points);
+    }
+    
+}
+

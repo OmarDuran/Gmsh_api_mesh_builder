@@ -157,6 +157,13 @@ public:
     /// Embed the DFN inside reservoir
     void EmbedDFNInsideReservoir();
     
+    /// Divide wellbore boundary into n_points + 1 elements
+    void RefineWellboreElements(int n_points);
+
+    /// Divide DFN fractrures according to the weigth omega.
+    void RefineDFN(double omega, double size_ratio);
+    
+    
 };
 
 
