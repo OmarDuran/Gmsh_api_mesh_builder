@@ -47,7 +47,7 @@ void Wellbore_2D_with_factures(){
     gmsh::model::add("boolean");
     gmsh::option::setNumber("Mesh.Algorithm", 6);
     
-    double r = 2.0;
+    double r = 1.25;
     double r_w = 0.127;
     
     gmsh::option::setNumber("Mesh.CharacteristicLengthMin", 0.1*r_w);
@@ -65,7 +65,6 @@ void Wellbore_2D_with_factures(){
     geo_builder.DrawWellboreRegion();
     gmsh::model::occ::synchronize();
 
-    /// Inter
     /// Load DFN
     int n_data = 20; // 10 fractures
     std::string file_name = "dfn.txt";
@@ -74,6 +73,8 @@ void Wellbore_2D_with_factures(){
     /// Draws DFN
     geo_builder.DrawDFN();
     gmsh::model::occ::synchronize();
+    
+    /// Intersect DFN with wellbore boundaries
     
     /// Physical tag
     geo_builder.ComputeReservoirPhysicalTags();
@@ -108,7 +109,7 @@ void Wellbore_2D_with_factures(){
     
 
     gmsh::model::occ::synchronize();
-//    gmsh::model::mesh::setRecombine(2, domain_area);
+//    gmsh::model::mesh::setRecombine(2, 1);
     gmsh::model::mesh::generate(2);
     
 //    gmsh::model::mesh::generate(2);

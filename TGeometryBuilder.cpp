@@ -165,11 +165,88 @@ void TGeometryBuilder::DrawDFN(){
         return;
     }
     
+    {
+        gmsh::vectorpair object, tool;
+        for (auto f: m_base_fracture_curve_tags) {
+            object.push_back(std::make_pair(1, f));
+        }
+        for (auto f: m_external_wire_curve_tags) {
+            tool.push_back(std::make_pair(1, f));
+        }
+        gmsh::vectorpair outDimTags;
+        std::vector<gmsh::vectorpair> outDimTagsMap;
+        gmsh::model::occ::fragment(object, tool, outDimTags, outDimTagsMap);
+        int aka  = 0;
+    }
+    
+    /// DFN intersection with boundaries
+//    m_base_fracture_curve_tags.clear();
+//    for (auto f: m_fracture_curve_tags) {
+//        for (auto tag: f.second){
+//            m_base_fracture_curve_tags.push_back(tag);
+//        }
+//    }
+    
+    std::pair<int, std::vector<int> > chunk_tag_sub_tag;
+    chunk_tag_sub_tag.second.resize(1);
+//    {
+//        std::map<int,std::vector<int>> fractures;
+//        std::map<int,std::vector<int>> boundaries;
+//        std::map<int,std::vector<int>> objects;
+//        std::map<int,std::vector<int>> tools;
+//        
+//        for (auto f: m_base_fracture_curve_tags) {
+//            chunk_tag_sub_tag.first = f;
+//            chunk_tag_sub_tag.second[0] = f;
+//            fractures.insert(chunk_tag_sub_tag);
+//            objects.insert(chunk_tag_sub_tag);
+//            m_fracture_curve_tags.insert(chunk_tag_sub_tag);
+//        }
+//        
+//        for (auto bc: m_external_wire_curve_tags) {
+//            chunk_tag_sub_tag.first = bc;
+//            chunk_tag_sub_tag.second[0] = bc;
+//            tools.insert(chunk_tag_sub_tag);
+//            boundaries.insert(chunk_tag_sub_tag);
+//            m_boundary_curve_tags.insert(chunk_tag_sub_tag);
+//        }
+//        
+//        bool there_are_intersections_Q = true;
+//        while (there_are_intersections_Q) {
+//            there_are_intersections_Q = ComputeFractureBCIntersections(objects, tools, fractures, boundaries);
+//        }
+//        
+//        chunk_tag_sub_tag.second.resize(0);
+//        /// Computing physical tag for fractures by group
+//        std::map<int,std::vector<int>> fractures_to_micro;
+//        for (auto f : m_fracture_curve_tags) {
+//            /// compute micro fractures
+//            chunk_tag_sub_tag = f;
+//            chunk_tag_sub_tag.second = ComputeAssociatedMicroFractures(chunk_tag_sub_tag, fractures);
+//            chunk_tag_sub_tag.first = f.first;
+//            fractures_to_micro.insert(chunk_tag_sub_tag);
+//            
+//        }
+//        m_fracture_curve_tags = fractures_to_micro; /// updating the micro fractures
+//        
+//        chunk_tag_sub_tag.second.resize(0);
+//        /// Computing physical tag for boundaries by group
+//        std::map<int,std::vector<int>> bc_to_micro;
+//        for (auto f : m_boundary_curve_tags) {
+//            /// compute micro fractures
+//            chunk_tag_sub_tag = f;
+//            chunk_tag_sub_tag.second = ComputeAssociatedMicroFractures(chunk_tag_sub_tag, boundaries);
+//            chunk_tag_sub_tag.first = f.first;
+//            bc_to_micro.insert(chunk_tag_sub_tag);
+//            
+//        }
+//        m_boundary_curve_tags = bc_to_micro; /// updating the micro fractures
+//        
+//    }
+    
     std::map<int,std::vector<int>> fractures;
     std::map<int,std::vector<int>> objects;
     std::map<int,std::vector<int>> tools;
-    
-    std::pair<int, std::vector<int> > chunk_tag_sub_tag;
     chunk_tag_sub_tag.second.resize(1);
     for (auto f: m_base_fracture_curve_tags) {
         chunk_tag_sub_tag.first = f;
@@ -197,7 +274,6 @@ void TGeometryBuilder::DrawDFN(){
         
     }
     m_fracture_curve_tags = fractures_to_micro; /// updating the micro fractures
-    
 }
 
 /// Compute DFN physical tags (fractures and end points)
@@ -283,7 +359,7 @@ bool TGeometryBuilder::ComputeFracturesIntersections(std::map<int,std::vector<in
     for (auto object : objects) {
         for (auto tool: tools) {
             std::vector<gmsh::vectorpair> map_dim_tags;
-            there_is_intersection_Q = IntersectFractures(object.first, tool.first, map_dim_tags);
+            there_is_intersection_Q = IntersectLines(object.first, tool.first, map_dim_tags);
             bool are_not_the_same_fractures_Q = (object.first != tool.first);
             if (there_is_intersection_Q && are_not_the_same_fractures_Q) { /// required deletion and expansion for both vectors
                 
@@ -374,7 +450,98 @@ bool TGeometryBuilder::ComputeFracturesIntersections(std::map<int,std::vector<in
     
 }
 
-bool TGeometryBuilder::IntersectFractures(int object_tag, int tool_tag, std::vector<gmsh::vectorpair> & map_dim_tags){
+bool TGeometryBuilder::ComputeFractureBCIntersections(std::map<int,std::vector<int>> & objects, std::map<int,std::vector<int>>& tools, std::map<int,std::vector<int>>  & fractures, std::map<int,std::vector<int>>  & boundaries){
+    
+    bool there_is_intersection_Q = false;
+    std::pair<int, std::vector<int> > chunk_tag_sub_tag;
+    for (auto object : objects) {
+        for (auto tool: tools) {
+            std::vector<gmsh::vectorpair> map_dim_tags;
+            there_is_intersection_Q = IntersectLines(object.first, tool.first, map_dim_tags);
+            if (there_is_intersection_Q) { /// required deletion and expansion for both vectors
+                
+                /// dropout object and tool on objects vector
+                objects.erase(object.first);
+                /// dropout object and tool on tools vector
+                tools.erase(tool.first);
+                
+                /// adjusting objects structure
+                {
+                    
+                    /// Appending new micro fractures associated to the object
+                    chunk_tag_sub_tag.first = object.first;
+                    chunk_tag_sub_tag.second.resize(0);
+                    for (auto micro_f: map_dim_tags[0]) { /// Associated to the object
+                        chunk_tag_sub_tag.second.push_back(micro_f.second);
+                    }
+                    fractures.erase(object.first);
+                    fractures.insert(chunk_tag_sub_tag);
+                    
+                    /// Appending new fractures
+                    for (auto micro_f: map_dim_tags[0]) { /// Asspciated to the object
+                        chunk_tag_sub_tag.first = micro_f.second;
+                        chunk_tag_sub_tag.second.resize(0);
+                        chunk_tag_sub_tag.second.push_back(micro_f.second);
+                        fractures.insert(chunk_tag_sub_tag);
+                        objects.insert(chunk_tag_sub_tag);
+                    }
+                    
+                }
+                
+                /// adjusting tools structure
+                {
+                    
+                    /// Appending new micro fractures associated to the object
+                    chunk_tag_sub_tag.first = tool.first;
+                    chunk_tag_sub_tag.second.resize(0);
+                    for (auto micro_f: map_dim_tags[1]) { /// Associated to the tool
+                        chunk_tag_sub_tag.second.push_back(micro_f.second);
+                    }
+                    boundaries.erase(tool.first);
+                    boundaries.insert(chunk_tag_sub_tag);
+                    
+                    /// Appending new fractures
+                    for (auto micro_f: map_dim_tags[1]) { /// Asspciated to the object
+                        chunk_tag_sub_tag.first = micro_f.second;
+                        chunk_tag_sub_tag.second.resize(0);
+                        chunk_tag_sub_tag.second.push_back(micro_f.second);
+                        boundaries.insert(chunk_tag_sub_tag);
+                        tools.insert(chunk_tag_sub_tag);
+                    }
+                    
+                }
+                return there_is_intersection_Q;
+                break;
+            }
+            else{
+                int n_objects = objects.size();
+                int n_tools = tools.size();
+                if(n_objects == n_tools && n_tools == 1){
+                    /// dropout object on objects vector
+                    objects.erase(object.first);
+                    /// dropout object on tools vector
+                    tools.erase(object.first);
+                    return true;
+                    break;
+                }
+            }
+            
+        }
+        
+        if (!there_is_intersection_Q) { /// Fracture do not intersect the boundary
+            /// dropout object on objects vector
+            objects.erase(object.first);
+            return true;
+            break;
+        }
+        
+    }
+    
+    return there_is_intersection_Q;
+    
+}
+
+bool TGeometryBuilder::IntersectLines(int object_tag, int tool_tag, std::vector<gmsh::vectorpair> & map_dim_tags){
     
     if (object_tag == tool_tag ) { // there is nothing to do for this case.
         return true;

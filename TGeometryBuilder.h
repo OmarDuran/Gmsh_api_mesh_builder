@@ -65,6 +65,9 @@ public:
     std::vector<int> m_base_fracture_curve_tags;
     
     /// Map of base fracture curve tag to subfracture curve tags
+    std::map<int, std::vector<int> > m_boundary_curve_tags;
+    
+    /// Map of base fracture curve tag to subfracture curve tags
     std::map<int, std::vector<int> > m_fracture_curve_tags;
     
     /// Entity tag for the wellbore region and boundaries
@@ -101,11 +104,13 @@ public:
     void DrawBaseFractures();
     
     /// Computes the intersection between two fractures and return false when the intersection is empty.
-    bool IntersectFractures(int object_tag, int tool_tag, std::vector<gmsh::vectorpair> & map_dim_tags);
+    bool IntersectLines(int object_tag, int tool_tag, std::vector<gmsh::vectorpair> & map_dim_tags);
     
     bool ComputeFracturesIntersections(std::map<int,std::vector<int>> & objects, std::map<int,std::vector<int>>& tools, std::map<int,std::vector<int>>  & fractures);
     
     std::vector<int> ComputeAssociatedMicroFractures(std::pair<int,std::vector<int>> & fracture_data,std::map<int,std::vector<int>>  & fractures);
+    
+    bool ComputeFractureBCIntersections(std::map<int,std::vector<int>> & objects, std::map<int,std::vector<int>>& tools, std::map<int,std::vector<int>>  & fractures, std::map<int,std::vector<int>>  & boundaries);
     
 public:
     
