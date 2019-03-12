@@ -76,102 +76,29 @@ void Wellbore_2D_with_factures(){
     /// The domain is constructed by a boolean operation
     gmsh::model::occ::synchronize();
 
-    double x,y,z;
-    x = y = z = 0.0;
+    TGeometryBuilder geo_builder;
+    std::vector<double> x_center(3,0);
+    geo_builder.DrawInternalCricle(r_w, x_center);
     
-    int pc = gmsh::model::occ::addPoint(x, y, z);
-    gmsh::vectorpair bc_external;
-    std::vector<int> curve_external_tags;
-    int external_circle_loop;
+    std::vector<double> x_mix(3,0);
+    std::vector<double> x_max(3,0);
+    x_mix[0] = -4.0;
+    x_mix[1] = -4.0;
+    x_max[0] = +4.0;
+    x_max[1] = +4.0;
+    geo_builder.DrawExternalRectangle(x_mix, x_max);
+    
+    int domain_area = geo_builder.DrawWellboreRegion();
+    
+//    /// construction by already defined wires
+//    std::vector<int> res_curve_tags;
+//    for (auto i: curve_external_tags) {
+//        res_curve_tags.push_back(i);
+//    }
+//    for (auto i: curve_internal_tags) {
+//        res_curve_tags.push_back(i);
+//    }
 
-    { /// construct outer circle
-        
-        x = r;
-        y = 0;
-        int p1 = gmsh::model::occ::addPoint(x, y, z);
-        
-        x = 0;
-        y = r;
-        int p2 = gmsh::model::occ::addPoint(x, y, z);
-        
-        x = -r;
-        y = 0;
-        int p3 = gmsh::model::occ::addPoint(x, y, z);
-        
-        x = 0;
-        y = -r;
-        int p4 = gmsh::model::occ::addPoint(x, y, z);
-        
-        int c1 = gmsh::model::occ::addEllipseArc(p1, pc, p2);
-        int c2 = gmsh::model::occ::addEllipseArc(p2, pc, p3);
-        int c3 = gmsh::model::occ::addEllipseArc(p3, pc, p4);
-        int c4 = gmsh::model::occ::addEllipseArc(p4, pc, p1);
-        
-        bc_external.push_back(std::make_pair(1, c1));
-        bc_external.push_back(std::make_pair(1, c2));
-        bc_external.push_back(std::make_pair(1, c3));
-        bc_external.push_back(std::make_pair(1, c4));
-        
-        curve_external_tags.push_back(c1);
-        curve_external_tags.push_back(c2);
-        curve_external_tags.push_back(c3);
-        curve_external_tags.push_back(c4);
-        external_circle_loop = gmsh::model::occ::addWire(curve_external_tags);
-    }
-    
-    gmsh::vectorpair bc_internal;
-    std::vector<int> curve_internal_tags;
-    int internal_circle_loop;
-
-    { /// Construction of internal circle
-        x = r_w;
-        y = 0;
-        int p1 = gmsh::model::occ::addPoint(x, y, z);
-        
-        x = 0;
-        y = r_w;
-        int p2 = gmsh::model::occ::addPoint(x, y, z);
-        
-        x = -r_w;
-        y = 0;
-        int p3 = gmsh::model::occ::addPoint(x, y, z);
-        
-        x = 0;
-        y = -r_w;
-        int p4 = gmsh::model::occ::addPoint(x, y, z);
-        
-        int c1 = gmsh::model::occ::addEllipseArc(p1, pc, p2);
-        int c2 = gmsh::model::occ::addEllipseArc(p2, pc, p3);
-        int c3 = gmsh::model::occ::addEllipseArc(p3, pc, p4);
-        int c4 = gmsh::model::occ::addEllipseArc(p4, pc, p1);
-        
-        bc_external.push_back(std::make_pair(1, c1));
-        bc_external.push_back(std::make_pair(1, c2));
-        bc_external.push_back(std::make_pair(1, c3));
-        bc_external.push_back(std::make_pair(1, c4));
-        
-        
-        curve_internal_tags.push_back(c1);
-        curve_internal_tags.push_back(c2);
-        curve_internal_tags.push_back(c3);
-        curve_internal_tags.push_back(c4);
-        internal_circle_loop = gmsh::model::occ::addWire(curve_internal_tags);
-    }
-    
-    /// construction by already defined wires
-    std::vector<int> res_curve_tags;
-    for (auto i: curve_external_tags) {
-        res_curve_tags.push_back(i);
-    }
-    for (auto i: curve_internal_tags) {
-        res_curve_tags.push_back(i);
-    }
-
-    
-    std::vector<int> wire_tags;
-    wire_tags.push_back(internal_circle_loop);
-    wire_tags.push_back(external_circle_loop);
-    int domain_area = gmsh::model::occ::addPlaneSurface(wire_tags);
     
     /// Embed fractures on computational domain
     gmsh::model::occ::synchronize();
@@ -184,46 +111,10 @@ void Wellbore_2D_with_factures(){
     gmsh::model::occ::synchronize();
     /// Physical tag
     
-    /// Functional physical tag for computational domain
-    int c_p_tag = 1;
-    int dim = 2;
-    std::vector<int> tags;
-    tags.push_back(domain_area);
-    gmsh::model::addPhysicalGroup(dim, tags);
-    stringstream f_name;
-    f_name << "reservoir";
-    std::string name = f_name.str();
-    gmsh::model::setPhysicalName(dim, c_p_tag, name);
-    c_p_tag++;
+    std::vector<int> res_physical_tags;
+    res_physical_tags = geo_builder.ComputeReservoirPhysicalTags();
     
-    /// Physical tag for computational boundaries
-    dim--;
-    { ///  internal
-        std::vector<int> bc_tags;
-        for (auto bc: curve_internal_tags) {
-            bc_tags.push_back(bc);
-        }
-        gmsh::model::addPhysicalGroup(dim, bc_tags);
-        stringstream s_bc_name;
-        s_bc_name << "bc_internal";
-        std::string bc_name = s_bc_name.str();
-        gmsh::model::setPhysicalName(dim, c_p_tag, bc_name);
-        c_p_tag++;
-    }
-    
-    { ///  external
-        std::vector<int> bc_tags;
-        for (auto bc: curve_external_tags) {
-            bc_tags.push_back(bc);
-        }
-        gmsh::model::addPhysicalGroup(dim, bc_tags);
-        stringstream s_bc_name;
-        s_bc_name << "bc_external";
-        std::string bc_name = s_bc_name.str();
-        gmsh::model::setPhysicalName(dim, c_p_tag, bc_name);
-        c_p_tag++;
-    }
-    
+    int c_p_tag = res_physical_tags[2]+1;
     /// Functional physical tag for fractures
     int c = 1;
     for (auto f : outDimTagsMap) {
@@ -242,24 +133,24 @@ void Wellbore_2D_with_factures(){
     }
     
 
-    /// Meshing constrols
-    {
-        int n_nodes = 10;
-        std::vector<int> bc_tags;
-        for (auto bc: curve_internal_tags) {
-            gmsh::model::mesh::setTransfiniteCurve(bc, n_nodes);
-        }
-    }
+//    /// Meshing constrols
+//    {
+//        int n_nodes = 10;
+//        std::vector<int> bc_tags;
+//        for (auto bc: curve_internal_tags) {
+//            gmsh::model::mesh::setTransfiniteCurve(bc, n_nodes);
+//        }
+//    }
     
-    {
-        int n_fracture_nodes = 10;
-        for (auto f : outDimTagsMap) {
-            std::vector<int> tags;
-            for (auto micro_f : f) {
-                gmsh::model::mesh::setTransfiniteCurve(micro_f.second, n_fracture_nodes);
-            }
-        }
-    }
+//    {
+//        int n_fracture_nodes = 10;
+//        for (auto f : outDimTagsMap) {
+//            std::vector<int> tags;
+//            for (auto micro_f : f) {
+//                gmsh::model::mesh::setTransfiniteCurve(micro_f.second, n_fracture_nodes);
+//            }
+//        }
+//    }
     
 
     gmsh::model::occ::synchronize();

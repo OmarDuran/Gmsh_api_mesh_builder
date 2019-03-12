@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
+#include <sstream> 
 #include <cmath>
 #include <thread>
 #include "gmsh.h"
@@ -57,6 +58,9 @@ private:
     
     /// Vector of fracture points
     std::vector<int> m_fracture_point_tags;
+    
+    /// Entity tag for the wellbore region
+    int m_wellbore_region_tag;
     
     /// Load the user-defined points (x,y,z)
     std::vector<std::vector<double>> LoadPoints(std::string & file_name, int n_data);
@@ -105,7 +109,6 @@ public:
     /// Load the user-defined points (x,y,z). They are used for fixing rigid modes.
     void LoadInternalPoints(std::string & file_name, int n_data);
     
-    
     /// Load a DFN points (x,y,z). It requires an even number of lines.
     void LoadDiscreteFractureNetwork(std::string & file_name, int n_data);
     
@@ -118,6 +121,11 @@ public:
     /// Draws a external rectangle with x_mix coordinate and x_max coordinate
     void DrawExternalRectangle(std::vector<double> x_mix, std::vector<double> x_max);
     
+    /// Draw a wellbore region domain based on the internal and external wires
+    int DrawWellboreRegion();
+    
+    /// Compute reservoir physical tags (domain and boundaries)
+    std::vector<int> ComputeReservoirPhysicalTags();
     
 };
 

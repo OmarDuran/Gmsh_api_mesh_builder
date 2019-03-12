@@ -184,7 +184,7 @@ void TGeometryBuilder::DrawRectanglePoints(std::vector<double> x_mix, std::vecto
     point[2] = z;
     points.push_back(point);
     
-    // p2
+    // p3
     point[0] = x_max[0];
     point[1] = x_max[1];
     point[2] = z;
@@ -279,10 +279,10 @@ void TGeometryBuilder::DrawExternalRectangle(std::vector<double> x_mix, std::vec
         m_external_wire_point_tags.push_back(point_tag);
     }
     
-    int p1 = m_external_wire_point_tags[1];
-    int p2 = m_external_wire_point_tags[2];
-    int p3 = m_external_wire_point_tags[3];
-    int p4 = m_external_wire_point_tags[4];
+    int p1 = m_external_wire_point_tags[0];
+    int p2 = m_external_wire_point_tags[1];
+    int p3 = m_external_wire_point_tags[2];
+    int p4 = m_external_wire_point_tags[3];
     
     int c1 = gmsh::model::occ::addLine(p1, p2);
     int c2 = gmsh::model::occ::addLine(p2, p3);
@@ -295,4 +295,55 @@ void TGeometryBuilder::DrawExternalRectangle(std::vector<double> x_mix, std::vec
     m_external_wire_curve_tags.push_back(c4);
     m_external_wire_curve_loop = gmsh::model::occ::addWire(m_external_wire_curve_tags);
     
+}
+
+int TGeometryBuilder::DrawWellboreRegion(){
+ 
+    /// construction by already defined wires    
+    std::vector<int> wire_tags;
+    wire_tags.push_back(m_internal_wire_curve_loop);
+    wire_tags.push_back(m_external_wire_curve_loop);
+    int wellbore_region_tag = gmsh::model::occ::addPlaneSurface(wire_tags);
+    m_wellbore_region_tag = wellbore_region_tag;
+    return wellbore_region_tag;
+}
+
+std::vector<int> TGeometryBuilder::ComputeReservoirPhysicalTags(){
+    
+    std::vector<int> reservoir_physical_tags;
+    
+    int c_p_tag = 1;
+    int dim = 2;
+    std::vector<int> tags;
+    tags.push_back(m_wellbore_region_tag);
+    gmsh::model::addPhysicalGroup(dim, tags);
+    std::stringstream f_name;
+    f_name << "reservoir";
+    std::string name = f_name.str();
+    gmsh::model::setPhysicalName(dim, c_p_tag, name);
+    reservoir_physical_tags.push_back(c_p_tag);
+    c_p_tag++;
+    
+    /// Physical tag for computational boundaries
+    dim--;
+    { ///  internal
+        gmsh::model::addPhysicalGroup(dim, m_internal_wire_curve_tags);
+        std::stringstream s_bc_name;
+        s_bc_name << "bc_internal";
+        std::string bc_name = s_bc_name.str();
+        gmsh::model::setPhysicalName(dim, c_p_tag, bc_name);
+        reservoir_physical_tags.push_back(c_p_tag);
+        c_p_tag++;
+    }
+    
+    { ///  external
+        gmsh::model::addPhysicalGroup(dim, m_external_wire_curve_tags);
+        std::stringstream s_bc_name;
+        s_bc_name << "bc_external";
+        std::string bc_name = s_bc_name.str();
+        gmsh::model::setPhysicalName(dim, c_p_tag, bc_name);
+        reservoir_physical_tags.push_back(c_p_tag);
+        c_p_tag++;
+    }
+    return reservoir_physical_tags;
 }
