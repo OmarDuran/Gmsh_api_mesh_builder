@@ -190,7 +190,7 @@ void TGeometryBuilder::DrawDFN(){
         }
         gmsh::vectorpair out_dim_tags;
         std::vector<gmsh::vectorpair> dfn_bc_dim_tags;
-        gmsh::model::occ::fragment(objects, tools, out_dim_tags, dfn_bc_dim_tags);
+        gmsh::model::occ::fragment(objects, tools, out_dim_tags, dfn_bc_dim_tags, false, true);
         gmsh::model::occ::synchronize();
         
         int n_base_fracture = m_base_fracture_curve_tags.size();
@@ -205,8 +205,8 @@ void TGeometryBuilder::DrawDFN(){
                 EntityBinaryTree left_tree, right_tree;
                 left_tree.m_entity_tag = dfn_bc_dim_tags[i][0].second;
                 right_tree.m_entity_tag = dfn_bc_dim_tags[i][1].second;
-                m_fracture_tree_tags[fracture_tag].m_left_fracture = &left_tree;
-                m_fracture_tree_tags[fracture_tag].m_right_fracture = &right_tree;
+                EntityBinaryTree::setLeaves(&m_fracture_tree_tags[fracture_tag],left_tree,right_tree);
+                
             }
         }
         
@@ -217,10 +217,9 @@ void TGeometryBuilder::DrawDFN(){
             int n_data = dfn_bc_dim_tags[i+shift].size();
             if (n_data == 2) {
                 EntityBinaryTree left_tree, right_tree;
-                left_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][0].second;
-                right_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][1].second;
-                m_internal_boundary_tree_tags[bc_tag].m_left_fracture = &left_tree;
-                m_internal_boundary_tree_tags[bc_tag].m_right_fracture = &right_tree;
+                left_tree.m_entity_tag = dfn_bc_dim_tags[i][0].second;
+                right_tree.m_entity_tag = dfn_bc_dim_tags[i][1].second;
+                EntityBinaryTree::setLeaves(&m_internal_boundary_tree_tags[bc_tag],left_tree,right_tree);
             }
         }
         
@@ -231,10 +230,10 @@ void TGeometryBuilder::DrawDFN(){
             int n_data = dfn_bc_dim_tags[i+shift].size();
             if (n_data == 2) {
                 EntityBinaryTree left_tree, right_tree;
-                left_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][0].second;
-                right_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][1].second;
-                m_external_boundary_tree_tags[bc_tag].m_left_fracture = &left_tree;
-                m_external_boundary_tree_tags[bc_tag].m_right_fracture = &right_tree;
+                left_tree.m_entity_tag = dfn_bc_dim_tags[i][0].second;
+                right_tree.m_entity_tag = dfn_bc_dim_tags[i][1].second;
+                EntityBinaryTree::setLeaves(&m_external_boundary_tree_tags[bc_tag],left_tree,right_tree);
+                
             }
         }
         
@@ -243,28 +242,18 @@ void TGeometryBuilder::DrawDFN(){
     
     {/// dfn and dfn fragmentation
         
+    
         /// rebased m_base_fracture_curve_tags
         m_base_fracture_curve_tags.clear();
         for (auto chunk: m_fracture_tree_tags) {
-            
-            bool has_branches_Q = true;
-            EntityBinaryTree fracture_tree;
-            fracture_tree.m_entity_tag = chunk.second.m_entity_tag;
-            fracture_tree.m_left_fracture = chunk.second.m_left_fracture;
-            fracture_tree.m_right_fracture = chunk.second.m_right_fracture;
-            while (has_branches_Q) {
-                has_branches_Q = (fracture_tree.m_left_fracture) && (fracture_tree.m_right_fracture);
-                if (has_branches_Q) { /// left based shearch
-                    fracture_tree.m_entity_tag = fracture_tree.m_left_fracture->m_entity_tag;
-                    fracture_tree.m_left_fracture = fracture_tree.m_left_fracture->m_left_fracture;
-                    fracture_tree.m_right_fracture = fracture_tree.m_right_fracture->m_right_fracture;
-                }
-                else{
-                    m_base_fracture_curve_tags.push_back(fracture_tree.m_left_fracture->m_entity_tag);
-                    m_base_fracture_curve_tags.push_back(fracture_tree.m_right_fracture->m_entity_tag);
-                }
+            EntityBinaryTree fracture_tree(chunk.second);
+            std::vector<int> leaves = EntityBinaryTree::getLeaves(&fracture_tree);
+            std::cout << "fracture tag : " << chunk.first << std::endl;
+            for (auto l: leaves) {
+                std::cout << "leave: " << l << std::endl;
+                m_base_fracture_curve_tags.push_back(l);
             }
-            
+            std::cout << std::endl << std::endl;
         }
         
         

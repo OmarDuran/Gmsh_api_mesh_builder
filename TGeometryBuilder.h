@@ -65,6 +65,78 @@ public:
         return *this;
     }
     
+    /// Assignement constructor overload for pointer data
+    const EntityBinaryTree & operator=(const EntityBinaryTree * other){
+        /// check for self-assignment
+        if(other == this){
+            return *this;
+        }
+        m_entity_tag        = other->m_entity_tag;
+        m_left_fracture     = other->m_left_fracture;
+        m_right_fracture    = other->m_right_fracture;
+        return *this;
+    }
+    
+    /// Function to get the count of leaf nodes in a binary tree
+    static unsigned int getLeafCount(EntityBinaryTree * tree)
+    {
+        if(tree == NULL){
+            return 0;
+        }
+        if(tree->m_left_fracture == NULL && tree->m_right_fracture == NULL){
+            return 1;
+        }
+        else{
+            unsigned int c = getLeafCount(tree->m_left_fracture)+
+            getLeafCount(tree->m_right_fracture);
+            return c;
+        }
+    }
+    
+    /// Function to get the leaves in a binary tree
+    static std::vector<int> getLeaves(EntityBinaryTree * tree)
+    {
+        std::vector<int> tags;
+        if(tree == NULL){
+            return tags;
+        }
+        if(tree->m_left_fracture == NULL && tree->m_right_fracture == NULL){
+            tags.push_back(tree->m_entity_tag);
+            return tags;
+        }
+        else{
+            std::vector<int> left_tags = getLeaves(tree->m_left_fracture);
+            std::vector<int> right_tags = getLeaves(tree->m_right_fracture);
+            for (auto i : left_tags) {
+                tags.push_back(i);
+            }
+            for (auto i : right_tags) {
+                tags.push_back(i);
+            }
+            return tags;
+        }
+    }
+    
+    /// Function to set the leaves in a binary tree
+    static void setLeaves(EntityBinaryTree * tree, EntityBinaryTree left, EntityBinaryTree right)
+    {
+        if(tree == NULL){
+            return;
+        }
+        if(tree->m_left_fracture == NULL && tree->m_right_fracture == NULL){
+            tree->m_left_fracture = new EntityBinaryTree(left);
+            tree->m_right_fracture = new EntityBinaryTree(right);
+//            *tree->m_left_fracture = left;
+//            *tree->m_right_fracture = right;
+            return;
+        }
+        else{
+            setLeaves(tree->m_left_fracture,left,right);
+            setLeaves(tree->m_right_fracture,left,right);
+            return;
+        }
+    }
+    
 };
 
 class TGeometryBuilder {
@@ -169,6 +241,21 @@ public:
     std::vector<int> ComputeAssociatedMicroFractures(std::pair<int,std::vector<int>> & fracture_data,std::map<int,std::vector<int>>  & fractures);
     
     bool ComputeFractureBCIntersections(std::map<int,std::vector<int>> & objects, std::map<int,std::vector<int>>& tools, std::map<int,std::vector<int>>  & fractures, std::map<int,std::vector<int>>  & boundaries);
+    
+    
+
+    
+//    /// Helper function that allocates a new node with the given data and NULL left and right pointers.
+//    EntityBinaryTree node * newNode(int data)
+//    {
+//        struct node* node = (struct node*)
+//        malloc(sizeof(struct node));
+//        node->data = data;
+//        node->left = NULL;
+//        node->right = NULL;
+//
+//        return(node);
+//    }
     
 public:
     
