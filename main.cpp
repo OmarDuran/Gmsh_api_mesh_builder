@@ -58,6 +58,14 @@ void Wellbore_2D_with_factures(){
 
     TGeometryBuilder geo_builder;
     
+    std::vector<double> x_center = {1.25, 1.0, 0.0};
+//    std::vector<double> x_center = {0.0, 0.0, 0.0};
+    geo_builder.DrawInternalCricle(r_w, x_center);
+    geo_builder.DrawExternalCricle(r, x_center);
+    geo_builder.DrawWellboreRegion();
+    gmsh::model::occ::synchronize();
+
+    /// Inter
     /// Load DFN
     int n_data = 20; // 10 fractures
     std::string file_name = "dfn.txt";
@@ -67,13 +75,6 @@ void Wellbore_2D_with_factures(){
     geo_builder.DrawDFN();
     gmsh::model::occ::synchronize();
     
-    std::vector<double> x_center = {1.25, 1.0, 0.0};
-//    std::vector<double> x_center = {0.0, 0.0, 0.0};
-    geo_builder.DrawInternalCricle(r_w, x_center);
-    geo_builder.DrawExternalCricle(r, x_center);
-    geo_builder.DrawWellboreRegion();
-    gmsh::model::occ::synchronize();
-
     /// Physical tag
     geo_builder.ComputeReservoirPhysicalTags();
     geo_builder.ComputeDFNPhysicalTags();
