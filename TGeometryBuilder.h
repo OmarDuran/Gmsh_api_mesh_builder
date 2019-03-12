@@ -103,6 +103,12 @@ public:
         if(tree->m_left_fracture == NULL && tree->m_right_fracture == NULL){
             tags.push_back(tree->m_entity_tag);
             return tags;
+        }else if (tree->m_left_fracture != NULL && tree->m_right_fracture == NULL){
+            std::vector<int> left_tags = getLeaves(tree->m_left_fracture);
+            for (auto i : left_tags) {
+                tags.push_back(i);
+            }
+            return tags;
         }
         else{
             std::vector<int> left_tags = getLeaves(tree->m_left_fracture);
@@ -126,8 +132,10 @@ public:
         if(tree->m_left_fracture == NULL && tree->m_right_fracture == NULL){
             tree->m_left_fracture = new EntityBinaryTree(left);
             tree->m_right_fracture = new EntityBinaryTree(right);
-//            *tree->m_left_fracture = left;
-//            *tree->m_right_fracture = right;
+            return;
+        }
+        else if(tree->m_left_fracture != NULL && tree->m_right_fracture == NULL){
+            tree->m_left_fracture = new EntityBinaryTree(left);
             return;
         }
         else{

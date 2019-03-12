@@ -229,10 +229,26 @@ void TGeometryBuilder::DrawDFN(){
             int bc_tag = tools[i+n_bc_internal].second;
             int n_data = dfn_bc_dim_tags[i+shift].size();
             if (n_data > 1) {
-                EntityBinaryTree left_tree, right_tree;
-                left_tree.m_entity_tag = dfn_bc_dim_tags[i][0].second;
-                right_tree.m_entity_tag = dfn_bc_dim_tags[i][1].second;
-                EntityBinaryTree::setLeaves(&m_external_boundary_tree_tags[bc_tag],left_tree,right_tree);
+                bool even_number_Q = n_data % 2 == 0;
+                if (even_number_Q) {
+                    for (int j = 0; j < n_data; j+=2 ) {
+                        EntityBinaryTree left_tree, right_tree;
+                        left_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][j].second;
+                        right_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][j+1].second;
+                        EntityBinaryTree::setLeaves(&m_external_boundary_tree_tags[bc_tag],left_tree,right_tree);
+                    }
+                }else{
+                    for (int j = 0; j < n_data - 1; j+=2 ) {
+                        EntityBinaryTree left_tree, right_tree;
+                        left_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][j].second;
+                        right_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][j+1].second;
+                        EntityBinaryTree::setLeaves(&m_external_boundary_tree_tags[bc_tag],left_tree,right_tree);
+                    }
+                    EntityBinaryTree left_tree, right_tree;
+                    left_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][n_data - 1].second;
+                    EntityBinaryTree::setLeaves(&m_external_boundary_tree_tags[bc_tag],left_tree,right_tree);
+                }
+
                 
             }
         }
