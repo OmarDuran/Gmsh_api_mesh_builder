@@ -167,13 +167,11 @@ void TGeometryBuilder::DrawDFN(){
     
     /// construct the map of fracture tree curve tags
     {
-        
         for (auto bc: m_base_fracture_curve_tags) {
-            EntityBinaryTree bc_tree;
+            EntityList bc_tree;
             bc_tree.m_entity_tag = bc;
-            m_fracture_tree_tags.insert(std::make_pair(bc, bc_tree));
+            m_fracture_list_tags.insert(std::make_pair(bc, bc_tree));
         }
-        
     }
     
     /// dfn and boundaries fragmentation
@@ -193,20 +191,41 @@ void TGeometryBuilder::DrawDFN(){
         gmsh::model::occ::fragment(objects, tools, out_dim_tags, dfn_bc_dim_tags);
         gmsh::model::occ::synchronize();
         
+        
+        { /// Eliminate external fractures
+            gmsh::vectorpair dim_tags_to_remove;
+            dim_tags_to_remove.push_back(std::make_pair(1, 12));
+            dim_tags_to_remove.push_back(std::make_pair(1, 15));
+            dim_tags_to_remove.push_back(std::make_pair(1, 27));
+            gmsh::model::occ::remove(dim_tags_to_remove);
+            gmsh::model::occ::synchronize();
+            
+            std::vector<int> remove = {12,15,27};
+            /// clean
+            std::vector<gmsh::vectorpair> dfn_bc_dim_tags_c;
+            for (auto i : dfn_bc_dim_tags) {
+                for (auto f: i) {
+                    f.second
+                }
+            }
+        }
+        
         int n_base_fracture = m_base_fracture_curve_tags.size();
         int n_bc_internal   = m_internal_wire_curve_tags.size();
         int n_bc_external   = m_external_wire_curve_tags.size();
         
-        /// Update for fracture tree structure
+        /// Update for fracture list structure
         for (int i = 0; i < n_base_fracture; i++) {
             int fracture_tag = objects[i].second;
             int n_data = dfn_bc_dim_tags[i].size();
-            if (n_data == 2) {
-                EntityBinaryTree left_tree, right_tree;
-                left_tree.m_entity_tag = dfn_bc_dim_tags[i][0].second;
-                right_tree.m_entity_tag = dfn_bc_dim_tags[i][1].second;
-                EntityBinaryTree::setLeaves(&m_fracture_tree_tags[fracture_tag],left_tree,right_tree);
-                
+            if (n_data > 1) {
+                std::vector<EntityList> list_vector;
+                for (int j = 0; j < n_data; j++) {
+                    EntityList list;
+                    list.m_entity_tag = dfn_bc_dim_tags[i][j].second;
+                    list_vector.push_back(list);
+                }
+                EntityList::setLeaves(&m_fracture_list_tags[fracture_tag],list_vector);
             }
         }
         
@@ -216,10 +235,13 @@ void TGeometryBuilder::DrawDFN(){
             int bc_tag = tools[i].second;
             int n_data = dfn_bc_dim_tags[i+shift].size();
             if (n_data > 1) {
-                EntityBinaryTree left_tree, right_tree;
-                left_tree.m_entity_tag = dfn_bc_dim_tags[i][0].second;
-                right_tree.m_entity_tag = dfn_bc_dim_tags[i][1].second;
-                EntityBinaryTree::setLeaves(&m_internal_boundary_tree_tags[bc_tag],left_tree,right_tree);
+                std::vector<EntityList> list_vector;
+                for (int j = 0; j < n_data; j++) {
+                    EntityList list;
+                    list.m_entity_tag = dfn_bc_dim_tags[i+shift][j].second;
+                    list_vector.push_back(list);
+                }
+                EntityList::setLeaves(&m_internal_boundary_list_tags[bc_tag],list_vector);
             }
         }
         
@@ -229,179 +251,88 @@ void TGeometryBuilder::DrawDFN(){
             int bc_tag = tools[i+n_bc_internal].second;
             int n_data = dfn_bc_dim_tags[i+shift].size();
             if (n_data > 1) {
-                bool even_number_Q = n_data % 2 == 0;
-                if (even_number_Q) {
-                    for (int j = 0; j < n_data; j+=2 ) {
-                        EntityBinaryTree left_tree, right_tree;
-                        left_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][j].second;
-                        right_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][j+1].second;
-                        EntityBinaryTree::setLeaves(&m_external_boundary_tree_tags[bc_tag],left_tree,right_tree);
-                    }
-                }else{
-                    for (int j = 0; j < n_data - 1; j+=2 ) {
-                        EntityBinaryTree left_tree, right_tree;
-                        left_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][j].second;
-                        right_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][j+1].second;
-                        EntityBinaryTree::setLeaves(&m_external_boundary_tree_tags[bc_tag],left_tree,right_tree);
-                    }
-                    EntityBinaryTree left_tree, right_tree;
-                    left_tree.m_entity_tag = dfn_bc_dim_tags[i+shift][n_data - 1].second;
-                    EntityBinaryTree::setLeaves(&m_external_boundary_tree_tags[bc_tag],left_tree,right_tree);
+                std::vector<EntityList> list_vector;
+                for (int j = 0; j < n_data; j++) {
+                    EntityList list;
+                    list.m_entity_tag = dfn_bc_dim_tags[i+shift][j].second;
+                    list_vector.push_back(list);
                 }
-
-                
+                EntityList::setLeaves(&m_external_boundary_list_tags[bc_tag],list_vector);
             }
         }
         
         /// rebased m_internal_wire_curve_tags
         m_internal_wire_curve_tags.clear();
-        for (auto chunk: m_internal_boundary_tree_tags) {
-            EntityBinaryTree bc_tree(chunk.second);
-            std::vector<int> leaves = EntityBinaryTree::getLeaves(&bc_tree);
+        for (auto chunk: m_internal_boundary_list_tags) {
+            EntityList bc_list(chunk.second);
+            std::vector<int> leaves = EntityList::getLeaves(&bc_list);
             for (auto l: leaves) {
                 m_internal_wire_curve_tags.push_back(l);
             }
-            std::cout << std::endl << std::endl;
         }
         
         /// rebased m_internal_wire_curve_tags
         m_external_wire_curve_tags.clear();
-        for (auto chunk: m_external_boundary_tree_tags) {
-            EntityBinaryTree bc_tree(chunk.second);
-            std::vector<int> leaves = EntityBinaryTree::getLeaves(&bc_tree);
+        for (auto chunk: m_external_boundary_list_tags) {
+            EntityList bc_list(chunk.second);
+            std::vector<int> leaves = EntityList::getLeaves(&bc_list);
             for (auto l: leaves) {
                 m_external_wire_curve_tags.push_back(l);
             }
-            std::cout << std::endl << std::endl;
         }
         
     }
     
     
-    {/// dfn and dfn fragmentation
+    {
         
-    
         /// rebased m_base_fracture_curve_tags
         m_base_fracture_curve_tags.clear();
-        for (auto chunk: m_fracture_tree_tags) {
-            EntityBinaryTree fracture_tree(chunk.second);
-            std::vector<int> leaves = EntityBinaryTree::getLeaves(&fracture_tree);
-            std::cout << "fracture tag : " << chunk.first << std::endl;
+        for (auto chunk: m_fracture_list_tags) {
+            std::cout << std::endl << std::endl;
+            EntityList fracture_list(chunk.second);
+            std::vector<int> leaves = EntityList::getLeaves(&fracture_list);
             for (auto l: leaves) {
-                std::cout << "leave: " << l << std::endl;
                 m_base_fracture_curve_tags.push_back(l);
             }
-            std::cout << std::endl << std::endl;
         }
-        
-        
-        gmsh::vectorpair objects, tools;
-        for (auto f: m_base_fracture_curve_tags) {
-            objects.push_back(std::make_pair(1, f));
-            tools.push_back(std::make_pair(1, f));
-        }
-//        gmsh::vectorpair out_dim_tags;
-//        std::vector<gmsh::vectorpair> dfn_bc_dim_tags;
-//        gmsh::model::occ::fragment(objects, tools, out_dim_tags, dfn_bc_dim_tags);
-//        gmsh::model::occ::synchronize();
-        
     }
     
-    /// DFN intersection with boundaries
-//    m_base_fracture_curve_tags.clear();
-//    for (auto f: m_fracture_curve_tags) {
-//        for (auto tag: f.second){
-//            m_base_fracture_curve_tags.push_back(tag);
-//        }
-//    }
-    
+
+    /// dfn and dfn fragmentation
     std::pair<int, std::vector<int> > chunk_tag_sub_tag;
     chunk_tag_sub_tag.second.resize(1);
-//    {
-//        std::map<int,std::vector<int>> fractures;
-//        std::map<int,std::vector<int>> boundaries;
-//        std::map<int,std::vector<int>> objects;
-//        std::map<int,std::vector<int>> tools;
-//        
-//        for (auto f: m_base_fracture_curve_tags) {
-//            chunk_tag_sub_tag.first = f;
-//            chunk_tag_sub_tag.second[0] = f;
-//            fractures.insert(chunk_tag_sub_tag);
-//            objects.insert(chunk_tag_sub_tag);
-//            m_fracture_curve_tags.insert(chunk_tag_sub_tag);
-//        }
-//        
-//        for (auto bc: m_external_wire_curve_tags) {
-//            chunk_tag_sub_tag.first = bc;
-//            chunk_tag_sub_tag.second[0] = bc;
-//            tools.insert(chunk_tag_sub_tag);
-//            boundaries.insert(chunk_tag_sub_tag);
-//            m_boundary_curve_tags.insert(chunk_tag_sub_tag);
-//        }
-//        
-//        bool there_are_intersections_Q = true;
-//        while (there_are_intersections_Q) {
-//            there_are_intersections_Q = ComputeFractureBCIntersections(objects, tools, fractures, boundaries);
-//        }
-//        
-//        chunk_tag_sub_tag.second.resize(0);
-//        /// Computing physical tag for fractures by group
-//        std::map<int,std::vector<int>> fractures_to_micro;
-//        for (auto f : m_fracture_curve_tags) {
-//            /// compute micro fractures
-//            chunk_tag_sub_tag = f;
-//            chunk_tag_sub_tag.second = ComputeAssociatedMicroFractures(chunk_tag_sub_tag, fractures);
-//            chunk_tag_sub_tag.first = f.first;
-//            fractures_to_micro.insert(chunk_tag_sub_tag);
-//            
-//        }
-//        m_fracture_curve_tags = fractures_to_micro; /// updating the micro fractures
-//        
-//        chunk_tag_sub_tag.second.resize(0);
-//        /// Computing physical tag for boundaries by group
-//        std::map<int,std::vector<int>> bc_to_micro;
-//        for (auto f : m_boundary_curve_tags) {
-//            /// compute micro fractures
-//            chunk_tag_sub_tag = f;
-//            chunk_tag_sub_tag.second = ComputeAssociatedMicroFractures(chunk_tag_sub_tag, boundaries);
-//            chunk_tag_sub_tag.first = f.first;
-//            bc_to_micro.insert(chunk_tag_sub_tag);
-//            
-//        }
-//        m_boundary_curve_tags = bc_to_micro; /// updating the micro fractures
-//        
-//    }
-    
-//    std::map<int,std::vector<int>> fractures;
-//    std::map<int,std::vector<int>> objects;
-//    std::map<int,std::vector<int>> tools;
-//    chunk_tag_sub_tag.second.resize(1);
-//    for (auto f: m_base_fracture_curve_tags) {
-//        chunk_tag_sub_tag.first = f;
-//        chunk_tag_sub_tag.second[0] = f;
-//        fractures.insert(chunk_tag_sub_tag);
-//        objects.insert(chunk_tag_sub_tag);
-//        tools.insert(chunk_tag_sub_tag);
-//        m_fracture_curve_tags.insert(chunk_tag_sub_tag);
-//    }
-//
-//    bool there_are_intersections_Q = true;
-//    while (there_are_intersections_Q) {
-//        there_are_intersections_Q = ComputeFracturesIntersections(objects, tools, fractures);
-//    }
-//
-//    chunk_tag_sub_tag.second.resize(0);
-//    /// Computing physical tag for fractures by group
-//    std::map<int,std::vector<int>> fractures_to_micro;
-//    for (auto f : m_fracture_curve_tags) {
-//        /// compute micro fractures
-//        chunk_tag_sub_tag = f;
-//        chunk_tag_sub_tag.second = ComputeAssociatedMicroFractures(chunk_tag_sub_tag, fractures);
-//        chunk_tag_sub_tag.first = f.first;
-//        fractures_to_micro.insert(chunk_tag_sub_tag);
-//
-//    }
-//    m_fracture_curve_tags = fractures_to_micro; /// updating the micro fractures
+
+    std::map<int,std::vector<int>> fractures;
+    std::map<int,std::vector<int>> objects;
+    std::map<int,std::vector<int>> tools;
+    chunk_tag_sub_tag.second.resize(1);
+    for (auto f: m_base_fracture_curve_tags) {
+        chunk_tag_sub_tag.first = f;
+        chunk_tag_sub_tag.second[0] = f;
+        fractures.insert(chunk_tag_sub_tag);
+        objects.insert(chunk_tag_sub_tag);
+        tools.insert(chunk_tag_sub_tag);
+        m_fracture_curve_tags.insert(chunk_tag_sub_tag);
+    }
+
+    bool there_are_intersections_Q = true;
+    while (there_are_intersections_Q) {
+        there_are_intersections_Q = ComputeFracturesIntersections(objects, tools, fractures);
+    }
+
+    chunk_tag_sub_tag.second.resize(0);
+    /// Computing physical tag for fractures by group
+    std::map<int,std::vector<int>> fractures_to_micro;
+    for (auto f : m_fracture_curve_tags) {
+        /// compute micro fractures
+        chunk_tag_sub_tag = f;
+        chunk_tag_sub_tag.second = ComputeAssociatedMicroFractures(chunk_tag_sub_tag, fractures);
+        chunk_tag_sub_tag.first = f.first;
+        fractures_to_micro.insert(chunk_tag_sub_tag);
+
+    }
+    m_fracture_curve_tags = fractures_to_micro; /// updating the micro fractures
 }
 
 /// Compute DFN physical tags (fractures and end points)
@@ -873,6 +804,21 @@ void TGeometryBuilder::DrawWellboreRegion(){
             EntityBinaryTree bc_tree;
             bc_tree.m_entity_tag = bc;
             m_external_boundary_tree_tags.insert(std::make_pair(bc, bc_tree));
+        }
+    }
+    
+    /// Construct the maps of internal and external boundary list curve tags
+    {
+        for (auto bc: m_internal_wire_curve_tags) {
+            EntityList bc_list;
+            bc_list.m_entity_tag = bc;
+            m_internal_boundary_list_tags.insert(std::make_pair(bc, bc_list));
+        }
+        
+        for (auto bc: m_external_wire_curve_tags) {
+            EntityList bc_list;
+            bc_list.m_entity_tag = bc;
+            m_external_boundary_list_tags.insert(std::make_pair(bc, bc_list));
         }
     }
     

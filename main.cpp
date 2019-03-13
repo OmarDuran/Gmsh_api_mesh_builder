@@ -82,7 +82,7 @@ void Wellbore_2D_with_factures(){
     /// Physical tag
     geo_builder.ComputeReservoirPhysicalTags();
     geo_builder.ComputeDFNPhysicalTags();
-    geo_builder.EmbedDFNInsideReservoir();
+//    geo_builder.EmbedDFNInsideReservoir();
 
     /// Meshing constrols
     int n_points = 10;

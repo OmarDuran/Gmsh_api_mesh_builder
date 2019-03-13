@@ -147,6 +147,117 @@ public:
     
 };
 
+// structure to reconstruc base fracture and associated microfractures
+class EntityList {
+    
+public:
+    
+    /// entity tag
+    int m_entity_tag = -1;
+    
+    /// Left fracture
+    std::vector<EntityList> * m_micro_fractures = nullptr;
+    
+    /// Default constructor
+    EntityList(){
+        m_entity_tag = -1;
+        m_micro_fractures = nullptr;
+    }
+
+    /// Constructor based on a new tag
+    EntityList(int entity_tag){
+        m_entity_tag = entity_tag;
+        m_micro_fractures = nullptr;
+    }
+
+    /// Copy constructor
+    EntityList(const EntityList & other){
+        m_entity_tag        = other.m_entity_tag;
+        m_micro_fractures   = other.m_micro_fractures;
+    }
+
+    /// Assignement constructor
+    const EntityList & operator=(const EntityList & other){
+        /// check for self-assignment
+        if(&other == this){
+            return *this;
+        }
+        m_entity_tag        = other.m_entity_tag;
+        m_micro_fractures   = other.m_micro_fractures;
+        return *this;
+    }
+
+    /// Assignement constructor overload for pointer data
+    const EntityList & operator=(const EntityList * other){
+        /// check for self-assignment
+        if(other == this){
+            return *this;
+        }
+        m_entity_tag        = other->m_entity_tag;
+        m_micro_fractures   = other->m_micro_fractures;
+        return *this;
+    }
+
+    /// Function to get the count of leaf nodes in a binary tree
+    static unsigned int getLeafCount(EntityList * tree)
+    {
+        if(tree == NULL){
+            return 0;
+        }
+        if(tree->m_micro_fractures == NULL){
+            return 1;
+        }
+        else{
+            unsigned int c = 0;
+            for (auto i : *tree->m_micro_fractures) {
+                c += getLeafCount(&i);
+            }
+            return c;
+        }
+    }
+
+    /// Function to get the leaves in a binary tree
+    static std::vector<int> getLeaves(EntityList * tree)
+    {
+        std::vector<int> tags;
+        if(tree == NULL){
+            return tags;
+        }
+        if(tree->m_micro_fractures == NULL){
+            tags.push_back(tree->m_entity_tag);
+            return tags;
+        }
+        else{
+            for (auto i : *tree->m_micro_fractures) {
+                std::vector<int> miroc_f_tags = getLeaves(&i);
+                for (auto mf : miroc_f_tags) {
+                    tags.push_back(mf);
+                }
+            }
+            return tags;
+        }
+    }
+
+    /// Function to set the leaves in a binary tree
+    static void setLeaves(EntityList * tree, std::vector<EntityList> micro_fractures)
+    {
+        if(tree == NULL){
+            return;
+        }
+        if(tree->m_micro_fractures == NULL){
+            tree->m_micro_fractures = new std::vector<EntityList>(micro_fractures);
+            return;
+        }
+        else{
+            for (auto i : *tree->m_micro_fractures) {
+                setLeaves(&i,micro_fractures);
+            }
+            return;
+        }
+    }
+    
+};
+
 class TGeometryBuilder {
     
 public:
@@ -207,6 +318,15 @@ public:
     
     /// Map of fracture tree curve tags
     std::map<int, EntityBinaryTree > m_fracture_tree_tags;
+    
+    /// Map of internal boundary tree curve tags
+    std::map<int, EntityList > m_internal_boundary_list_tags;
+    
+    /// Map of external boundary tree curve tags
+    std::map<int, EntityList > m_external_boundary_list_tags;
+    
+    /// Map of fracture tree curve tags
+    std::map<int, EntityList > m_fracture_list_tags;
     
     /// Entity tag for the wellbore region and boundaries
     std::vector<int>  m_wellbore_region_tags;
