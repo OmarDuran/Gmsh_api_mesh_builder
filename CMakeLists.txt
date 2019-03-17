@@ -57,6 +57,27 @@ else()
 endif()
 
 
+#linking with CGAL library
+option(USING_CGAL "Whether the CGAL package will be linked with the library" OFF)
+
+if(USING_CGAL)
+  set(CGAL_INSTALL_PREFIX "/usr/local/Cellar/cgal/4.13")
+  set(CGAL_INCLUDE_DIRS  "${CGAL_INSTALL_PREFIX}/include" )
+  set(CGAL_MODULES_DIR   "${CGAL_INSTALL_PREFIX}/lib/cmake/CGAL" )
+  set(CGAL_LIBRARIES_DIR "${CGAL_INSTALL_PREFIX}/lib" )
+  set(CGAL "${CGAL_MODULES_DIR}" )
+#  find_package( CGAL REQUIRED )
+  if(NOT CGAL)
+    message(FATAL_ERROR "Could not find cgal") 
+  endif()
+  link_libraries(${CGAL})
+#   find_path(CGAL_LIBRARIES_DIR CGAL_Ipelet_base.h)
+#   if(NOT CGAL_INC)
+#     message(FATAL_ERROR "Could not find CGAL_Ipelet_base.h")
+#   endif()
+endif()
+
+
 # linking with GMSH
 find_library(GMSH_LIB gmsh)
 link_libraries(${GMSH_LIB})
@@ -78,6 +99,6 @@ file(GLOB header *.h)
 file(GLOB source *.cpp)
 
 add_executable(GmshMeshBuilder ${source} ${header})
-target_link_libraries(GmshMeshBuilder ${GMSH_LIB} pz)
+target_link_libraries(GmshMeshBuilder ${GMSH_LIB} ${CGAL} pz)
 
 

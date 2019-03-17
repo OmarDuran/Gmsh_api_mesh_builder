@@ -29,16 +29,52 @@ void Wellbore_trajectory_3D();
 /// Geometry that represents a 2D wellbore inside a irregular reservoir with line fractures
 void Wellbore_2D_with_factures();
 
+#ifdef USING_CGAL
+    #include <CGAL/Exact_predicates_exact_constructions_kernel.h>
+    #include <CGAL/Min_circle_2.h>
+    #include <CGAL/Min_circle_2_traits_2.h>
+    #include <iostream>
+    // typedefs
+    typedef  CGAL::Exact_predicates_exact_constructions_kernel K;
+    typedef  CGAL::Min_circle_2_traits_2<K>  Traits;
+    typedef  CGAL::Min_circle_2<Traits>      Min_circle;
+    typedef  K::Point_2                      Point;
+    /// Geometry search with CGAL
+    void PointSearch_in_2D();
+#endif
+
 /// Read a wellbore trajectory defined with xyz data.
 std::vector<std::vector<double>> ReadWellTrajectory(std::string & file_name, int n_data);
 
 int main()
 {
+    
+#ifdef USING_CGAL
+    /// Testing CGAL
+    PointSearch_in_2D();
+    return 0;
+#endif
+    
     Wellbore_2D_with_factures();
 //    Wellbore_trajectory_3D();
 //    Constructive_solid_geometry();
     return 0;
 }
+
+#ifdef USING_CGAL
+void PointSearch_in_2D(){
+    
+    const int n = 100;
+    Point P[n];
+    for ( int i = 0; i < n; ++i)
+        P[ i] = Point( (i%2 == 0 ? i : -i), 0);
+    // (0,0), (-1,0), (2,0), (-3,0), ...
+    Min_circle  mc1( P, P+n, false);    // very slow
+    Min_circle  mc2( P, P+n, true);     // fast
+    CGAL::set_pretty_mode( std::cout);
+    std::cout << mc2;
+}
+#endif
 
 void Wellbore_2D_with_factures(){
     
