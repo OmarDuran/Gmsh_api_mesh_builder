@@ -32,12 +32,84 @@ void Wellbore_2D_with_factures();
 /// Read a wellbore trajectory defined with xyz data.
 std::vector<std::vector<double>> ReadWellTrajectory(std::string & file_name, int n_data);
 
+/// CGAL utilities
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+#include <CGAL/Polygon_2.h>
+#include <iostream>
+typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
+typedef K::Point_2 Point;
+typedef CGAL::Polygon_2<K> Polygon_2;
+using std::cout; using std::endl;
+
+
+/// Point search geometry
+void PointSearch_in_2D();
+
+bool check_inside(Point pt, Point *pgn_begin, Point *pgn_end, K traits)
+{
+    cout << "The point " << pt;
+    switch(CGAL::bounded_side_2(pgn_begin, pgn_end,pt, traits)) {
+        case CGAL::ON_BOUNDED_SIDE :
+            cout << " is inside the polygon.\n";
+            break;
+        case CGAL::ON_BOUNDARY:
+            cout << " is on the polygon boundary.\n";
+            break;
+        case CGAL::ON_UNBOUNDED_SIDE:
+            cout << " is outside the polygon.\n";
+            break;
+    }
+}
+
+bool check_inside_new(Point pt, Polygon_2 & polygon)
+{
+    cout << "The point " << pt;
+    switch(polygon.bounded_side(pt)) {
+        case CGAL::ON_BOUNDED_SIDE :
+            cout << " is inside the polygon.\n";
+            break;
+        case CGAL::ON_BOUNDARY:
+            cout << " is on the polygon boundary.\n";
+            break;
+        case CGAL::ON_UNBOUNDED_SIDE:
+            cout << " is outside the polygon.\n";
+            break;
+    }
+}
+
+
 int main()
 {
+    PointSearch_in_2D();
+    return 0;
+    
     Wellbore_2D_with_factures();
 //    Wellbore_trajectory_3D();
 //    Constructive_solid_geometry();
     return 0;
+}
+
+/// Point search geometry
+void PointSearch_in_2D(){
+    
+    Point points_2[] = { Point(0,0), Point(5.1,0), Point(1,1), Point(0.5,6)};
+    std::vector<Point> points = { Point(0,0), Point(5.1,0), Point(1,1), Point(0.5,6)};
+    Polygon_2 pgn(points.begin(), points.end());
+
+    std::size_t i = 1;
+    Point p = pgn.vertex(i);
+    REAL x = p.x();
+    REAL y = p.y();
+    // check if the polygon is simple.
+    cout << "The polygon is "
+    << (CGAL::is_simple_2(points.begin(), points.end(), K()) ? "" : "not ")
+    << "simple." << endl;
+    check_inside_new(Point(0.5, 0.5),pgn);
+    check_inside_new(Point(1.5, 2.5),pgn);
+    check_inside_new(Point(2.5, 0),pgn);
+    check_inside(Point(0.5, 0.5), points_2, points_2+4, K());
+    check_inside(Point(1.5, 2.5), points_2, points_2+4, K());
+    check_inside(Point(2.5, 0), points_2, points_2+4, K());
 }
 
 void Wellbore_2D_with_factures(){

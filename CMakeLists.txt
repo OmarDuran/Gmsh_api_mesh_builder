@@ -71,6 +71,13 @@ endif()
 
 include_directories(${GMSH_INC})
 
+# @omar:: linking with CGAL in very nasty approach 
+find_package(CGAL QUIET COMPONENTS Core ) 
+if ( CGAL_FOUND ) 
+  include( ${CGAL_USE_FILE} ) 
+else() 
+    message(FATAL_ERROR "This program requires the CGAL library, and will not be compiled.") 
+endif() 
 
 
 # Adding projec files
@@ -78,6 +85,6 @@ file(GLOB header *.h)
 file(GLOB source *.cpp)
 
 add_executable(GmshMeshBuilder ${source} ${header})
-target_link_libraries(GmshMeshBuilder ${GMSH_LIB} pz)
+target_link_libraries(GmshMeshBuilder ${GMSH_LIB} ${CGAL} pz)
 
 

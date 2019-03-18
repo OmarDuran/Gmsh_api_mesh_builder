@@ -192,23 +192,23 @@ void TGeometryBuilder::DrawDFN(){
         gmsh::model::occ::synchronize();
         
         
-        { /// Eliminate external fractures
-            gmsh::vectorpair dim_tags_to_remove;
-            dim_tags_to_remove.push_back(std::make_pair(1, 12));
-            dim_tags_to_remove.push_back(std::make_pair(1, 15));
-            dim_tags_to_remove.push_back(std::make_pair(1, 27));
-            gmsh::model::occ::remove(dim_tags_to_remove);
-            gmsh::model::occ::synchronize();
-            
-            std::vector<int> remove = {12,15,27};
-            /// clean
-            std::vector<gmsh::vectorpair> dfn_bc_dim_tags_c;
-            for (auto i : dfn_bc_dim_tags) {
-                for (auto f: i) {
-                    f.second
-                }
-            }
-        }
+//        { /// Eliminate external fractures
+//            gmsh::vectorpair dim_tags_to_remove;
+//            dim_tags_to_remove.push_back(std::make_pair(1, 12));
+//            dim_tags_to_remove.push_back(std::make_pair(1, 15));
+//            dim_tags_to_remove.push_back(std::make_pair(1, 27));
+//            gmsh::model::occ::remove(dim_tags_to_remove);
+//            gmsh::model::occ::synchronize();
+//            
+//            std::vector<int> remove = {12,15,27};
+//            /// clean
+//            std::vector<gmsh::vectorpair> dfn_bc_dim_tags_c;
+//            for (auto i : dfn_bc_dim_tags) {
+//                for (auto f: i) {
+//                    f.second
+//                }
+//            }
+//        }
         
         int n_base_fracture = m_base_fracture_curve_tags.size();
         int n_bc_internal   = m_internal_wire_curve_tags.size();
