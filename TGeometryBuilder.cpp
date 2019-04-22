@@ -191,24 +191,50 @@ void TGeometryBuilder::DrawDFN(){
         gmsh::model::occ::fragment(objects, tools, out_dim_tags, dfn_bc_dim_tags);
         gmsh::model::occ::synchronize();
         
-        
-//        { /// Eliminate external fractures
-//            gmsh::vectorpair dim_tags_to_remove;
-//            dim_tags_to_remove.push_back(std::make_pair(1, 12));
-//            dim_tags_to_remove.push_back(std::make_pair(1, 15));
-//            dim_tags_to_remove.push_back(std::make_pair(1, 27));
-//            gmsh::model::occ::remove(dim_tags_to_remove);
-//            gmsh::model::occ::synchronize();
-//            
-//            std::vector<int> remove = {12,15,27};
-//            /// clean
-//            std::vector<gmsh::vectorpair> dfn_bc_dim_tags_c;
-//            for (auto i : dfn_bc_dim_tags) {
-//                for (auto f: i) {
-//                    f.second
-//                }
-//            }
+//        { /// Cleaning lines that are outside form omega domain
+//            gmsh::vectorpair objects, tools;
+//            objects = out_dim_tags;
+//            tools.push_back(std::make_pair(2, 1));
+//            gmsh::vectorpair cut_out_dim_tags;
+//            std::vector<gmsh::vectorpair> cut_dfn_bc_dim_tags;
+//            int tag = -1;
+//            gmsh::model::occ::cut(objects, tools, cut_out_dim_tags, cut_dfn_bc_dim_tags, tag, false, false);
+////            gmsh::model::occ::remove(cut_out_dim_tags);
+//            int aka = 0;
 //        }
+        
+//        void cut(const gmsh::vectorpair & objectDimTags,
+//                 const gmsh::vectorpair & toolDimTags,
+//                 gmsh::vectorpair & outDimTags,
+//                 std::vector<gmsh::vectorpair> & outDimTagsMap,
+//                 const int tag = -1,
+//                 const bool removeObject = true,
+//                 const bool removeTool = true);
+        
+//        gmsh::model::occ::
+        
+        { /// Eliminate external fractures
+            gmsh::vectorpair dim_tags_to_remove;
+            dim_tags_to_remove.push_back(std::make_pair(1, 9));
+            gmsh::model::occ::remove(dim_tags_to_remove);
+            gmsh::model::occ::removeAllDuplicates();
+            gmsh::model::occ::synchronize();
+            
+            std::set<int> to_remove;
+            to_remove.insert(9);
+            /// clean
+            std::vector<gmsh::vectorpair> dfn_bc_dim_tags_c;
+            for (int i = 0; i < dfn_bc_dim_tags.size(); i++) {
+                gmsh::vectorpair i_pair = dfn_bc_dim_tags[i];
+                for (int k = 0; k < i_pair.size(); k++) {
+                    int tag = i_pair[k].second;
+                    bool is_member_Q = to_remove.find(tag) != to_remove.end();
+                    if (is_member_Q) {
+                        dfn_bc_dim_tags[i].erase(k);
+                    }
+                }
+            }
+        }
         
         int n_base_fracture = m_base_fracture_curve_tags.size();
         int n_bc_internal   = m_internal_wire_curve_tags.size();

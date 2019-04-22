@@ -80,8 +80,8 @@ bool check_inside_new(Point pt, Polygon_2 & polygon)
 
 int main()
 {
-    PointSearch_in_2D();
-    return 0;
+//    PointSearch_in_2D();
+//    return 0;
     
     Wellbore_2D_with_factures();
 //    Wellbore_trajectory_3D();
@@ -119,7 +119,7 @@ void Wellbore_2D_with_factures(){
     gmsh::model::add("boolean");
     gmsh::option::setNumber("Mesh.Algorithm", 6);
     
-    double r = 1.25;
+    double r = 2.25;
     double r_w = 0.127;
     
     gmsh::option::setNumber("Mesh.CharacteristicLengthMin", 0.1*r_w);
@@ -130,8 +130,8 @@ void Wellbore_2D_with_factures(){
 
     TGeometryBuilder geo_builder;
     
-    std::vector<double> x_center = {1.25, 1.0, 0.0};
-//    std::vector<double> x_center = {0.0, 0.0, 0.0};
+//    std::vector<double> x_center = {1.25, 1.0, 0.0};
+    std::vector<double> x_center = {0.0, 0.0, 0.0};
     geo_builder.DrawInternalCricle(r_w, x_center);
 //    std::vector<double> x_mix = {-4.0, -4.0, 0.0};
 //    std::vector<double> x_max = {4.0, 4.0, 0.0};
@@ -141,20 +141,22 @@ void Wellbore_2D_with_factures(){
     gmsh::model::occ::synchronize();
 
     /// Load DFN
-    int n_data = 20; // 10 fractures
-    std::string file_name = "dfn.txt";
+    int n_data = 2; // 10 fractures
+//    std::string file_name = "dfn.txt";
+    std::string file_name = "two_fracs.txt";
     geo_builder.LoadDiscreteFractureNetwork(file_name, n_data);
     
     /// Draws DFN
+    /// Intersect DFN with wellbore boundaries
     geo_builder.DrawDFN();
     gmsh::model::occ::synchronize();
     
-    /// Intersect DFN with wellbore boundaries
+
     
     /// Physical tag
     geo_builder.ComputeReservoirPhysicalTags();
     geo_builder.ComputeDFNPhysicalTags();
-//    geo_builder.EmbedDFNInsideReservoir();
+    geo_builder.EmbedDFNInsideReservoir();
 
     /// Meshing constrols
     int n_points = 10;

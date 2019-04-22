@@ -13,6 +13,7 @@
 #include <fstream>
 #include <sstream> 
 #include <map>
+#include <set>
 #include <cmath>
 #include <thread>
 #include "gmsh.h"
