@@ -158,9 +158,10 @@ void Wellbore_2D_with_factures(){
     geo_builder.ComputeDFNPhysicalTags();
     geo_builder.EmbedDFNInsideReservoir();
 
+    
     /// Meshing constrols
-    int n_points = 10;
-    geo_builder.RefineWellboreElements(n_points);
+//    int n_points = 10;
+//    geo_builder.RefineWellboreElements(n_points);
     double omega = 0.95;
     double size_ratio = 0.9;
     geo_builder.RefineDFN(omega,size_ratio);
@@ -185,6 +186,7 @@ void Wellbore_2D_with_factures(){
 //    }
     
 
+
     gmsh::model::occ::synchronize();
 //    gmsh::model::mesh::setRecombine(2, 1);
     gmsh::model::mesh::generate(2);
@@ -196,6 +198,11 @@ void Wellbore_2D_with_factures(){
     /// Coherence
     
     gmsh::write("wellbore_2D.msh");
+    
+
+    // show everything in the gui
+    gmsh::fltk::run();
+
     
     gmsh::finalize(); /// Mandatory
 }
