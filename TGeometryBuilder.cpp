@@ -1009,17 +1009,65 @@ void TGeometryBuilder::ComputeReservoirPhysicalTags(){
     gmsh::model::mesh::embed(1,m_internal_wire_curve_tags,2,wellbore_tag);
     gmsh::model::mesh::embed(1,m_external_wire_curve_tags,2,wellbore_tag);
     
+//    gmsh::vectorpair internal_tags;
+//    for(auto i : m_internal_wire_curve_tags){
+//        internal_tags.push_back(std::make_pair(1, i));
+//    }
+//
+//    double size = 0.1/50.0;
+//    gmsh::model::mesh::setSize(internal_tags,size);
+    
 }
 
 
 /// Divide wellbore boundary into n_points + 1 elements
-void TGeometryBuilder::RefineWellboreElements(int n_points){
-    for (auto bc: m_internal_wire_curve_tags) {
-        gmsh::model::mesh::setTransfiniteCurve(bc, n_points);
+void TGeometryBuilder::RefineWellboreElements(double omega, double size_ratio, int n_base_points){
+    const int dim = 1;
+    /// Computing minimun fracture size
+    double min_size = 183729;
+    double max_size = 0.0;
+    for (auto bc : m_internal_wire_curve_tags) {
+        double xmin,ymin,zmin;
+        double xmax,ymax,zmax;
+        gmsh::model::getBoundingBox(dim, bc, xmin, ymin, zmin, xmax, ymax, zmax);
+        double squared_norm = (xmin-xmax)*(xmin-xmax)+(ymin-ymax)*(ymin-ymax)+(zmin-zmax)*(zmin-zmax);
+        double norm = sqrt(squared_norm);
+        if (norm <= min_size) {
+            min_size = norm;
+        }
+        if (norm > max_size) {
+            max_size = norm;
+        }
+    }
+    
+    double avg_scale = (1.0 - omega) * max_size + omega * min_size;
+    
+    std::map<int,int> bc_tag_n_points;
+    for (auto bc : m_internal_wire_curve_tags) {
+        double xmin,ymin,zmin;
+        double xmax,ymax,zmax;
+        gmsh::model::getBoundingBox(dim, bc, xmin, ymin, zmin, xmax, ymax, zmax);
+        double squared_norm = (xmin-xmax)*(xmin-xmax)+(ymin-ymax)*(ymin-ymax)+(zmin-zmax)*(zmin-zmax);
+        double norm = sqrt(squared_norm);
+        double ratio = norm / avg_scale;
+        int n_points = floor(ratio);
+        if (n_points <= n_base_points) {
+            n_points = n_base_points;
+        }
+        double max_size_ratio = norm / max_size;
+        if (size_ratio > max_size_ratio) {
+            bc_tag_n_points.insert(std::make_pair(bc, n_points));
+        }
+    }
+    
+    for (auto bc_data: bc_tag_n_points) {
+        int bc_tag = bc_data.first;
+        int n_points = bc_data.second;
+        gmsh::model::mesh::setTransfiniteCurve(bc_tag, n_points);
     }
 }
 
-void TGeometryBuilder::RefineDFN(double omega, double size_ratio){
+void TGeometryBuilder::RefineDFN(double omega, double size_ratio, int n_base_points){
     
     const int dim = 1;
     /// Computing minimun fracture size
@@ -1053,8 +1101,8 @@ void TGeometryBuilder::RefineDFN(double omega, double size_ratio){
             double norm = sqrt(squared_norm);
             double ratio = norm / avg_scale;
             int n_points = floor(ratio);
-            if (n_points == 0) {
-                n_points = 2;
+            if (n_points <= n_base_points) {
+                n_points = n_base_points;
             }
             double max_size_ratio = norm / max_size;
             if (size_ratio > max_size_ratio) {

@@ -130,8 +130,8 @@ void Wellbore_2D_with_factures(){
 
     TGeometryBuilder geo_builder;
     
-    std::vector<double> x_center = {1.0, 1.0, 0.0};
-//    std::vector<double> x_center = {0.0, 0.0, 0.0};
+//    std::vector<double> x_center = {1.0, 1.0, 0.0};
+    std::vector<double> x_center = {0.0, 0.0, 0.0};
     geo_builder.DrawInternalCricle(r_w, x_center);
 //    std::vector<double> x_mix = {-4.0, -4.0, 0.0};
 //    std::vector<double> x_max = {4.0, 4.0, 0.0};
@@ -141,9 +141,9 @@ void Wellbore_2D_with_factures(){
     gmsh::model::occ::synchronize();
 
     /// Load DFN
-    int n_data = 20; // 10 fractures
-    std::string file_name = "dfn.txt";
-//    std::string file_name = "two_fracs.txt";
+    int n_data = 4; // 10 fractures
+//    std::string file_name = "dfn.txt";
+    std::string file_name = "two_fracs.txt";
     geo_builder.LoadDiscreteFractureNetwork(file_name, n_data);
     
     /// Draws DFN
@@ -164,9 +164,11 @@ void Wellbore_2D_with_factures(){
     /// Meshing constrols
 //    int n_points = 10;
 //    geo_builder.RefineWellboreElements(n_points);
-    double omega = 0.95;
-    double size_ratio = 1.0;
-    geo_builder.RefineDFN(omega,size_ratio);
+    double omega = 1.0;
+    double size_ratio = 1.1;
+    int n_base_points = 1;
+    geo_builder.RefineWellboreElements(omega, size_ratio, n_base_points);
+    geo_builder.RefineDFN(omega,size_ratio,n_base_points);
     
 
     gmsh::model::occ::synchronize();

@@ -452,11 +452,11 @@ public:
     /// Embed the DFN inside reservoir
     void EmbedDFNInsideReservoir();
     
-    /// Divide wellbore boundary into n_points + 1 elements
-    void RefineWellboreElements(int n_points);
+    /// Divide wellbore boundary at least in n_points
+    void RefineWellboreElements(double omega, double size_ratio, int n_base_points);
 
     /// Divide DFN fractrures according to the weigth omega.
-    void RefineDFN(double omega, double size_ratio);
+    void RefineDFN(double omega, double size_ratio, int n_base_points);
     
     const bool IsMemeberQ(Point pt, Polygon_2 & polygon) const
     {
