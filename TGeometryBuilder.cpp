@@ -28,6 +28,9 @@ std::vector<std::vector<double>> TGeometryBuilder::LoadPoints(std::string & file
     
     std::ifstream in(file_name.c_str());
     std::vector<std::vector<double>> points(n_data);
+    if (n_data == 0) {
+        return points;
+    }
     double x,y,z;
     int c = 0;
     while(in)
@@ -59,7 +62,9 @@ void TGeometryBuilder::LoadInternalPoints(std::string & file_name, int n_data){
 }
 
 void TGeometryBuilder::LoadDiscreteFractureNetwork(std::string & file_name, int n_data){
-    m_fracture_pts = LoadPoints(file_name, n_data);
+    if (n_data > 1) {
+        m_fracture_pts = LoadPoints(file_name, n_data);
+    }
 }
 
 void TGeometryBuilder::BuildWire(std::vector<std::vector<double>> & points, std::vector<int> & ignored_points, std::vector<int> & point_tags, std::vector<int> & curve_tags, int & curve_loop){
@@ -87,6 +92,12 @@ void TGeometryBuilder::BuildWire(std::vector<std::vector<double>> & points, std:
     
     int n_point_tag = point_tags.size();
     for (int i_tag = 0; i_tag < n_point_tag - 1; i_tag++) {
+        if (i_tag == 0) {
+            int ini_tag = point_tags[n_point_tag-1];
+            int end_tag = point_tags[i_tag];
+            int curve_tag = gmsh::model::occ::addLine(ini_tag, end_tag);
+            curve_tags.push_back(curve_tag);
+        }
         int ini_tag = point_tags[i_tag];
         int end_tag = point_tags[i_tag+1];
         int curve_tag = gmsh::model::occ::addLine(ini_tag, end_tag);
@@ -802,49 +813,6 @@ void TGeometryBuilder::DrawInternalCricle(double r, std::vector<double> x_center
     
     gmsh::model::occ::synchronize();
     
-    /// Filling CGAL 2D points structure
-    const int n_points = 5;
-    std::vector<double> xi_par;
-    double dxi = 1.0/double(n_points);
-    for (int i = 0; i < n_points; i++) {
-        double xi = 0.0 + dxi * i;
-        xi_par.push_back(xi);
-    }
-    
-    std::vector<double> c1_points,c2_points,c3_points,c4_points;
-    gmsh::model::getValue(1, c1, xi_par, c1_points);
-    gmsh::model::getValue(1, c2, xi_par, c2_points);
-    gmsh::model::getValue(1, c3, xi_par, c3_points);
-    gmsh::model::getValue(1, c4, xi_par, c4_points);
-    
-    for (int i = 0; i < n_points; i++) {
-        double x = c1_points[3*i+0];
-        double y = c1_points[3*i+1];
-        m_internal_wire_cgal_points.push_back(Point(x,y));
-    }
-
-    for (int i = 0; i < n_points; i++) {
-        double x = c2_points[3*i+0];
-        double y = c2_points[3*i+1];
-        m_internal_wire_cgal_points.push_back(Point(x,y));
-    }
-    
-    for (int i = 0; i < n_points; i++) {
-        double x = c3_points[3*i+0];
-        double y = c3_points[3*i+1];
-        m_internal_wire_cgal_points.push_back(Point(x,y));
-    }
-    
-    
-    for (int i = 0; i < n_points; i++) {
-        double x = c4_points[3*i+0];
-        double y = c4_points[3*i+1];
-        m_internal_wire_cgal_points.push_back(Point(x,y));
-    }
-    
-    
-    
-    
 }
 
 void TGeometryBuilder::DrawExternalCricle(double r, std::vector<double> x_center){
@@ -879,46 +847,6 @@ void TGeometryBuilder::DrawExternalCricle(double r, std::vector<double> x_center
     m_external_wire_curve_tags.push_back(c4);
     
     gmsh::model::occ::synchronize();
-    
-    /// Filling CGAL 2D points structure
-    const int n_points = 5;
-    std::vector<double> xi_par;
-    double dxi = 1.0/double(n_points);
-    for (int i = 0; i < n_points; i++) {
-        double xi = 0.0 + dxi * i;
-        xi_par.push_back(xi);
-    }
-    
-    std::vector<double> c1_points,c2_points,c3_points,c4_points;
-    gmsh::model::getValue(1, c1, xi_par, c1_points);
-    gmsh::model::getValue(1, c2, xi_par, c2_points);
-    gmsh::model::getValue(1, c3, xi_par, c3_points);
-    gmsh::model::getValue(1, c4, xi_par, c4_points);
-    
-    for (int i = 0; i < n_points; i++) {
-        double x = c1_points[3*i+0];
-        double y = c1_points[3*i+1];
-        m_external_wire_cgal_points.push_back(Point(x,y));
-    }
-    
-    for (int i = 0; i < n_points; i++) {
-        double x = c2_points[3*i+0];
-        double y = c2_points[3*i+1];
-        m_external_wire_cgal_points.push_back(Point(x,y));
-    }
-    
-    for (int i = 0; i < n_points; i++) {
-        double x = c3_points[3*i+0];
-        double y = c3_points[3*i+1];
-        m_external_wire_cgal_points.push_back(Point(x,y));
-    }
-    
-    
-    for (int i = 0; i < n_points; i++) {
-        double x = c4_points[3*i+0];
-        double y = c4_points[3*i+1];
-        m_external_wire_cgal_points.push_back(Point(x,y));
-    }
     
 }
 

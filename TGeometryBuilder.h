@@ -19,13 +19,6 @@
 #include <algorithm>
 #include "gmsh.h"
 
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Polygon_2.h>
-#include <iostream>
-typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
-typedef K::Point_2 Point;
-typedef CGAL::Polygon_2<K> Polygon_2;
-
 /// structure to reconstruc base fracture and associated microfractures
 class EntityBinaryTree {
     
@@ -284,10 +277,7 @@ public:
     
     /// Vector of internal wire point tags
     std::vector<int> m_internal_wire_point_tags;
-    
-    /// Vector of external wire point tags
-    std::vector<Point> m_internal_wire_cgal_points;
-    
+
     /// Vector of internal wire curve tags
     std::vector<int> m_internal_wire_curve_tags;
     
@@ -296,9 +286,6 @@ public:
     
     /// Vector of external wire point tags
     std::vector<int> m_external_wire_point_tags;
-    
-    /// Vector of external wire point tags
-    std::vector<Point> m_external_wire_cgal_points;
     
     /// Vector of external wire curve tags
     std::vector<int> m_external_wire_curve_tags;
@@ -457,34 +444,6 @@ public:
 
     /// Divide DFN fractrures according to the weigth omega.
     void RefineDFN(double omega, double size_ratio, int n_base_points);
-    
-    const bool IsMemeberQ(Point pt, Polygon_2 & polygon) const
-    {
-        bool is_member_Q = false;
-        switch(polygon.bounded_side(pt)) {
-            case CGAL::ON_BOUNDED_SIDE :
-                is_member_Q = true;
-                break;
-            case CGAL::ON_BOUNDARY:
-                is_member_Q = true;
-                break;
-            case CGAL::ON_UNBOUNDED_SIDE:
-                is_member_Q = false;
-                break;
-        }
-        return is_member_Q;
-    }
-    
-    const void PrintPolygon(Polygon_2 & polygon) const
-    {
-        int n_vertices = polygon.size();
-        for(std::size_t i = 0; i < n_vertices; i++){
-            Point p = polygon.vertex(i);
-            std::cout << "Coordinate number " << i << std::endl;
-            std::cout << "x = " <<  p.x() << std::endl;
-            std::cout << "y = " <<  p.y() << std::endl;
-        }
-    }
     
 };
 

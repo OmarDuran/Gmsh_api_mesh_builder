@@ -133,11 +133,15 @@ void Wellbore_2D_with_factures(){
 //    std::vector<double> x_center = {1.0, 1.0, 0.0};
     std::vector<double> x_center = {0.0, 0.0, 0.0};
     geo_builder.DrawInternalCricle(r_w, x_center);
-//    std::vector<double> x_mix = {-4.0, -4.0, 0.0};
-//    std::vector<double> x_max = {4.0, 4.0, 0.0};
-//    geo_builder.DrawExternalRectangle(x_mix, x_max);
-    geo_builder.DrawExternalCricle(r, x_center);
-//    geo_builder.DrawWellboreRegion();
+//    std::string file_bc = "internal_wire.txt";
+//    int bc_n_data = 8;
+//    geo_builder.LoadInternalWire(file_bc, bc_n_data);
+//    geo_builder.BuildInternalWire();
+    
+    std::vector<double> x_mix = {-2.0, -2.0, 0.0};
+    std::vector<double> x_max = {2.0, 2.0, 0.0};
+    geo_builder.DrawExternalRectangle(x_mix, x_max);
+//    geo_builder.DrawExternalCricle(r, x_center);
     gmsh::model::occ::synchronize();
 
     /// Load DFN
@@ -162,17 +166,16 @@ void Wellbore_2D_with_factures(){
 
     
     /// Meshing constrols
-//    int n_points = 10;
-//    geo_builder.RefineWellboreElements(n_points);
     double omega = 1.0;
     double size_ratio = 1.1;
-    int n_base_points = 1;
+    int n_base_points = 5;
     geo_builder.RefineWellboreElements(omega, size_ratio, n_base_points);
     geo_builder.RefineDFN(omega,size_ratio,n_base_points);
     
 
     gmsh::model::occ::synchronize();
 //    gmsh::model::mesh::setRecombine(2, 1);
+//    gmsh::model::mesh::set
     gmsh::model::mesh::generate(2);
     
 //    gmsh::model::mesh::generate(2);
