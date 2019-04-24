@@ -119,7 +119,7 @@ void Wellbore_2D_with_factures(){
     gmsh::model::add("boolean");
     gmsh::option::setNumber("Mesh.Algorithm", 6);
     
-    double r = 2.25;
+    double r = 1.25;
     double r_w = 0.127;
     
     gmsh::option::setNumber("Mesh.CharacteristicLengthMin", 0.1*r_w);
@@ -130,28 +130,30 @@ void Wellbore_2D_with_factures(){
 
     TGeometryBuilder geo_builder;
     
-//    std::vector<double> x_center = {1.25, 1.0, 0.0};
-    std::vector<double> x_center = {0.0, 0.0, 0.0};
+    std::vector<double> x_center = {1.0, 1.0, 0.0};
+//    std::vector<double> x_center = {0.0, 0.0, 0.0};
     geo_builder.DrawInternalCricle(r_w, x_center);
 //    std::vector<double> x_mix = {-4.0, -4.0, 0.0};
 //    std::vector<double> x_max = {4.0, 4.0, 0.0};
 //    geo_builder.DrawExternalRectangle(x_mix, x_max);
     geo_builder.DrawExternalCricle(r, x_center);
-    geo_builder.DrawWellboreRegion();
+//    geo_builder.DrawWellboreRegion();
     gmsh::model::occ::synchronize();
 
     /// Load DFN
-    int n_data = 2; // 10 fractures
-//    std::string file_name = "dfn.txt";
-    std::string file_name = "two_fracs.txt";
+    int n_data = 20; // 10 fractures
+    std::string file_name = "dfn.txt";
+//    std::string file_name = "two_fracs.txt";
     geo_builder.LoadDiscreteFractureNetwork(file_name, n_data);
     
     /// Draws DFN
     /// Intersect DFN with wellbore boundaries
     geo_builder.DrawDFN();
-    gmsh::model::occ::synchronize();
+
     
 
+    /// Computing wellbore region
+    geo_builder.DrawWellboreRegion();
     
     /// Physical tag
     geo_builder.ComputeReservoirPhysicalTags();
@@ -163,29 +165,9 @@ void Wellbore_2D_with_factures(){
 //    int n_points = 10;
 //    geo_builder.RefineWellboreElements(n_points);
     double omega = 0.95;
-    double size_ratio = 0.9;
+    double size_ratio = 1.0;
     geo_builder.RefineDFN(omega,size_ratio);
     
-//    /// Meshing constrols
-//    {
-//        int n_nodes = 10;
-//        std::vector<int> bc_tags;
-//        for (auto bc: curve_internal_tags) {
-//            gmsh::model::mesh::setTransfiniteCurve(bc, n_nodes);
-//        }
-//    }
-    
-//    {
-//        int n_fracture_nodes = 10;
-//        for (auto f : outDimTagsMap) {
-//            std::vector<int> tags;
-//            for (auto micro_f : f) {
-//                gmsh::model::mesh::setTransfiniteCurve(micro_f.second, n_fracture_nodes);
-//            }
-//        }
-//    }
-    
-
 
     gmsh::model::occ::synchronize();
 //    gmsh::model::mesh::setRecombine(2, 1);
@@ -200,6 +182,16 @@ void Wellbore_2D_with_factures(){
     gmsh::write("wellbore_2D.msh");
     
 
+    std::string geometry_file = "wellbore_2D.msh";
+    TPZGmshReader Geometry;
+    REAL l = 1.0;
+    Geometry.SetCharacteristiclength(l);
+    Geometry.SetFormatVersion("4.1");
+    TPZGeoMesh * gmesh = Geometry.GeometricGmshMesh(geometry_file);
+    Geometry.PrintPartitionSummary(std::cout);
+    std::string vtk_file = "wellbore_geo";
+    TPZGeoMeshBluider::PrintGeometry(gmesh,vtk_file);
+    
     // show everything in the gui
     gmsh::fltk::run();
 
@@ -474,7 +466,7 @@ void InsertTheElements(TPZGeoMesh * gmesh){
                 std::vector<int> group_element_types;
                 std::vector<std::vector<int> > group_element_identifiers;
                 std::vector<std::vector<int> > group_node_identifiers;
-                gmsh::model::mesh::getElements(group_element_types, group_element_identifiers, group_node_identifiers, dim, tag);
+//                gmsh::model::mesh::getElements(group_element_types, group_element_identifiers, group_node_identifiers, dim, tag);
                 int n_types = group_element_types.size();
                 for (int itype = 0; itype < n_types; itype++){
                     int el_type = group_element_types[itype];
@@ -579,11 +571,11 @@ void Constructive_solid_geometry(){
     
     //// Gathering required information for constuction of a TPZGeoMesh object
     {
-        std::vector<int> node_identifiers;
+        const std::vector<int> node_identifiers;
         std::vector<double> coord;
         std::vector<double> parametricCoord;
-        gmsh::model::mesh::getNodes(node_identifiers, coord, parametricCoord);
-        TPZGeoMeshBluider::InsertNodes(gmesh, node_identifiers, coord);
+//        gmsh::model::mesh::getNodes(node_identifiers, coord, parametricCoord);
+//        TPZGeoMeshBluider::InsertNodes(gmesh, node_identifiers, coord);
         
         InsertTheElements(gmesh);
     }

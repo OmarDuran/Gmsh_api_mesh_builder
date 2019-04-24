@@ -153,13 +153,45 @@ void TGeometryBuilder::DrawBaseFractures(){
         int curve_tag = gmsh::model::occ::addLine(ini_tag, end_tag);
         m_base_fracture_curve_tags.push_back(curve_tag);
     }
-    
+    gmsh::model::occ::synchronize();
 }
+
+#define new_fragmentation_Q
 
 void TGeometryBuilder::DrawDFN(){
     
+    /// Construct the maps of internal and external boundary tree curve tags
+    {
+        for (auto bc: m_internal_wire_curve_tags) {
+            EntityBinaryTree bc_tree;
+            bc_tree.m_entity_tag = bc;
+            m_internal_boundary_tree_tags.insert(std::make_pair(bc, bc_tree));
+        }
+        
+        for (auto bc: m_external_wire_curve_tags) {
+            EntityBinaryTree bc_tree;
+            bc_tree.m_entity_tag = bc;
+            m_external_boundary_tree_tags.insert(std::make_pair(bc, bc_tree));
+        }
+    }
+    
+    /// Construct the maps of internal and external boundary list curve tags
+    {
+        for (auto bc: m_internal_wire_curve_tags) {
+            EntityList bc_list;
+            bc_list.m_entity_tag = bc;
+            m_internal_boundary_list_tags.insert(std::make_pair(bc, bc_list));
+        }
+        
+        for (auto bc: m_external_wire_curve_tags) {
+            EntityList bc_list;
+            bc_list.m_entity_tag = bc;
+            m_external_boundary_list_tags.insert(std::make_pair(bc, bc_list));
+        }
+    }
+    
     DrawBaseFractures();
-    gmsh::model::occ::synchronize();
+    
     int n_point = m_fracture_pts.size();
     if (n_point <= 1) { /// No DFN is generated
         return;
@@ -192,91 +224,57 @@ void TGeometryBuilder::DrawDFN(){
         gmsh::model::occ::fragment(objects, tools, out_dim_tags, dfn_bc_dim_tags);
         gmsh::model::occ::synchronize();
         
-//        { /// Cleaning lines that are outside form omega domain
-//            gmsh::vectorpair objects, tools;
+        int n_base_fracture = m_base_fracture_curve_tags.size();
+        int n_bc_internal   = m_internal_wire_curve_tags.size();
+        int n_bc_external   = m_external_wire_curve_tags.size();
+        gmsh::vectorpair dim_tags_to_remove;
+        
+//        /// Cleaning lines that are outside from omega
+//        {
+//            
+//            int n_internal_points = m_internal_wire_cgal_points.size();
+//            if (n_internal_points==0) {
+//                return ;
+//            }
+//            Polygon_2 polygon_internal(m_internal_wire_cgal_points.begin(), m_internal_wire_cgal_points.end());
+//            Polygon_2 polygon_external(m_external_wire_cgal_points.begin(), m_external_wire_cgal_points.end());
+//
 //            int n_base_fracture = m_base_fracture_curve_tags.size();
 //            for (int i = 0; i < n_base_fracture; i++) {
 //                int n_data = dfn_bc_dim_tags[i].size();
 //                for (int j = 0; j < n_data; j++) {
-//                    objects.push_back(std::make_pair(dfn_bc_dim_tags[i][j].first, dfn_bc_dim_tags[i][j].second));
+//                    int entity_tag = dfn_bc_dim_tags[i][j].second;
+//                    double xmin, ymin, zmin, xmax, ymax, zmax;
+//                    gmsh::model::getBoundingBox(1, entity_tag, xmin, ymin, zmin, xmax, ymax, zmax);
+//                    /// internal boundary
+//                    bool is_internal_region_member_Q;
+//                    {
+//                        bool is_left_p_member_Q =  IsMemeberQ(Point(xmin,ymin),polygon_internal);
+//                        bool is_right_p_member_Q =  IsMemeberQ(Point(xmax,ymax),polygon_internal);
+//                        is_internal_region_member_Q = is_left_p_member_Q || is_right_p_member_Q;
+//                        if (is_internal_region_member_Q) {
+//                            m_fracture_tags_to_remove.insert(entity_tag);
+//                            dim_tags_to_remove.push_back(std::make_pair(1, entity_tag));
+//                        }
+//                    }
+//                    
+//                    /// external boundary
+//                    {
+//                        bool is_left_p_member_Q =  IsMemeberQ(Point(xmin,ymin),polygon_external);
+//                        bool is_right_p_member_Q =  IsMemeberQ(Point(xmax,ymax),polygon_external);
+//                        if ((!is_left_p_member_Q && !is_right_p_member_Q)) {
+//                            m_fracture_tags_to_remove.insert(entity_tag);
+//                            dim_tags_to_remove.push_back(std::make_pair(1, entity_tag));
+//                        }
+//                    }
+//                    
 //                }
 //            }
 //            
-//            tools.push_back(std::make_pair(2, 1));
-//            gmsh::vectorpair cut_out_dim_tags;
-//            std::vector<gmsh::vectorpair> cut_dfn_bc_dim_tags;
-//            int tag = -1;
-//            gmsh::model::occ::cut(objects, tools, cut_out_dim_tags, cut_dfn_bc_dim_tags, tag, false, false);
-////            gmsh::model::occ::remove(cut_out_dim_tags);
-//            int aka = 0;
+//            gmsh::model::occ::remove(dim_tags_to_remove,true);
 //        }
         
-//        void cut(const gmsh::vectorpair & objectDimTags,
-//                 const gmsh::vectorpair & toolDimTags,
-//                 gmsh::vectorpair & outDimTags,
-//                 std::vector<gmsh::vectorpair> & outDimTagsMap,
-//                 const int tag = -1,
-//                 const bool removeObject = true,
-//                 const bool removeTool = true);
-        
-        /// Clean
-        {
-            gmsh::vectorpair dim_tags_to_remove;
-            int n_internal_points = m_internal_wire_cgal_points.size();
-            if (n_internal_points==0) {
-                return ;
-            }
-            Polygon_2 polygon_internal(m_internal_wire_cgal_points.begin(), m_internal_wire_cgal_points.end());
 
-            int n_base_fracture = m_base_fracture_curve_tags.size();
-            for (int i = 0; i < n_base_fracture; i++) {
-                int n_data = dfn_bc_dim_tags[i].size();
-                for (int j = 0; j < n_data; j++) {
-                    int entity_tag = dfn_bc_dim_tags[i][j].second;
-                    std::vector<double> frac_points, xi_par = {0,1};
-                    gmsh::model::getValue(1, entity_tag, xi_par, frac_points);
-                    bool is_left_p_member_Q =  IsMemeberQ(Point(frac_points[0],frac_points[1]),polygon_internal);
-                    bool is_right_p_member_Q =  IsMemeberQ(Point(frac_points[3],frac_points[4]),polygon_internal);
-                    if (is_left_p_member_Q || is_right_p_member_Q) {
-                        m_fracture_tags_to_remove.insert(entity_tag);
-                        dim_tags_to_remove.push_back(std::make_pair(1, entity_tag));
-                    }
-                }
-            }
-            
-        }
-        
-//        /// Eliminate external fractures
-
-//        dim_tags_to_remove.push_back(std::make_pair(1, 9));
-//        gmsh::model::occ::remove(dim_tags_to_remove);
-//        gmsh::model::occ::removeAllDuplicates();
-//        gmsh::model::occ::synchronize();
-
-//        /// Clean
-//        std::set<int> to_remove;
-//        to_remove.insert(9);
-        
-//        {
-//
-//            for (int i = 0; i < dfn_bc_dim_tags.size(); i++) {
-//                gmsh::vectorpair i_pair = dfn_bc_dim_tags[i];
-//                gmsh::vectorpair vec_pair;
-//                for (int k = 0; k < i_pair.size(); k++) {
-//                    int tag = i_pair[k].second;
-//                    bool is_not_member_Q = to_remove.find(tag) == to_remove.end();
-//                    if (is_not_member_Q) {
-//                        vec_pair.push_back(i_pair[k]);
-//                    }
-//                }
-//                dfn_bc_dim_tags_clean.push_back(vec_pair);
-//            }
-//            dfn_bc_dim_tags.clear();
-//        }
-        
-        int n_base_fracture = m_base_fracture_curve_tags.size();
-        int n_bc_internal   = m_internal_wire_curve_tags.size();
-        int n_bc_external   = m_external_wire_curve_tags.size();
         
         /// Update for fracture list structure
         for (int i = 0; i < n_base_fracture; i++) {
@@ -285,9 +283,14 @@ void TGeometryBuilder::DrawDFN(){
             if (n_data > 1) {
                 std::vector<EntityList> list_vector;
                 for (int j = 0; j < n_data; j++) {
-                    EntityList list;
-                    list.m_entity_tag = dfn_bc_dim_tags[i][j].second;
-                    list_vector.push_back(list);
+                    int enity_tag = dfn_bc_dim_tags[i][j].second;
+                    bool is_not_member_Q = m_fracture_tags_to_remove.find(enity_tag) == m_fracture_tags_to_remove.end();
+                    if (is_not_member_Q) {
+                        EntityList list;
+                        list.m_entity_tag = enity_tag;
+                        list_vector.push_back(list);
+                    }
+                    
                 }
                 EntityList::setLeaves(&m_fracture_list_tags[fracture_tag],list_vector);
             }
@@ -347,9 +350,11 @@ void TGeometryBuilder::DrawDFN(){
         
     }
     
+#ifndef new_fragmentation_Q
+
     
     {
-        
+
         /// rebased m_base_fracture_curve_tags
         m_base_fracture_curve_tags.clear();
         for (auto chunk: m_fracture_list_tags) {
@@ -400,6 +405,20 @@ void TGeometryBuilder::DrawDFN(){
 
     }
     m_fracture_curve_tags = fractures_to_micro; /// updating the micro fractures
+    
+#else
+    
+    /// rebased m_fracture_curve_tags
+    m_fracture_curve_tags.clear();
+    for (auto chunk: m_fracture_list_tags) {
+        int fracture_tag = chunk.first;
+        EntityList fracture_list(chunk.second);
+        std::vector<int> leaves = EntityList::getLeaves(&fracture_list);
+        m_fracture_curve_tags[fracture_tag] = leaves;
+    }
+    
+#endif
+    
 }
 
 /// Compute DFN physical tags (fractures and end points)
@@ -780,11 +799,11 @@ void TGeometryBuilder::DrawInternalCricle(double r, std::vector<double> x_center
     m_internal_wire_curve_tags.push_back(c2);
     m_internal_wire_curve_tags.push_back(c3);
     m_internal_wire_curve_tags.push_back(c4);
-    m_internal_wire_curve_loop = gmsh::model::occ::addWire(m_internal_wire_curve_tags);
+    
     gmsh::model::occ::synchronize();
     
     /// Filling CGAL 2D points structure
-    const int n_points = 4;
+    const int n_points = 5;
     std::vector<double> xi_par;
     double dxi = 1.0/double(n_points);
     for (int i = 0; i < n_points; i++) {
@@ -858,14 +877,14 @@ void TGeometryBuilder::DrawExternalCricle(double r, std::vector<double> x_center
     m_external_wire_curve_tags.push_back(c2);
     m_external_wire_curve_tags.push_back(c3);
     m_external_wire_curve_tags.push_back(c4);
-    m_external_wire_curve_loop = gmsh::model::occ::addWire(m_external_wire_curve_tags);
+    
     gmsh::model::occ::synchronize();
     
     /// Filling CGAL 2D points structure
-    const int n_points = 4;
+    const int n_points = 5;
     std::vector<double> xi_par;
     double dxi = 1.0/double(n_points);
-    for (int i = 1; i < n_points; i++) {
+    for (int i = 0; i < n_points; i++) {
         double xi = 0.0 + dxi * i;
         xi_par.push_back(xi);
     }
@@ -931,48 +950,22 @@ void TGeometryBuilder::DrawExternalRectangle(std::vector<double> x_mix, std::vec
     m_external_wire_curve_tags.push_back(c2);
     m_external_wire_curve_tags.push_back(c3);
     m_external_wire_curve_tags.push_back(c4);
-    m_external_wire_curve_loop = gmsh::model::occ::addWire(m_external_wire_curve_tags);
+
     
 }
 
 void TGeometryBuilder::DrawWellboreRegion(){
- 
+    
+    m_internal_wire_curve_loop = gmsh::model::occ::addWire(m_internal_wire_curve_tags);
+    m_external_wire_curve_loop = gmsh::model::occ::addWire(m_external_wire_curve_tags);
+    
     /// construction by already defined wires    
     std::vector<int> wire_tags;
     wire_tags.push_back(m_internal_wire_curve_loop);
     wire_tags.push_back(m_external_wire_curve_loop);
     int wellbore_region_tag = gmsh::model::occ::addPlaneSurface(wire_tags);
     m_wellbore_region_tags.push_back(wellbore_region_tag);
-    
-    /// Construct the maps of internal and external boundary tree curve tags
-    {
-        for (auto bc: m_internal_wire_curve_tags) {
-            EntityBinaryTree bc_tree;
-            bc_tree.m_entity_tag = bc;
-            m_internal_boundary_tree_tags.insert(std::make_pair(bc, bc_tree));
-        }
-        
-        for (auto bc: m_external_wire_curve_tags) {
-            EntityBinaryTree bc_tree;
-            bc_tree.m_entity_tag = bc;
-            m_external_boundary_tree_tags.insert(std::make_pair(bc, bc_tree));
-        }
-    }
-    
-    /// Construct the maps of internal and external boundary list curve tags
-    {
-        for (auto bc: m_internal_wire_curve_tags) {
-            EntityList bc_list;
-            bc_list.m_entity_tag = bc;
-            m_internal_boundary_list_tags.insert(std::make_pair(bc, bc_list));
-        }
-        
-        for (auto bc: m_external_wire_curve_tags) {
-            EntityList bc_list;
-            bc_list.m_entity_tag = bc;
-            m_external_boundary_list_tags.insert(std::make_pair(bc, bc_list));
-        }
-    }
+    gmsh::model::occ::synchronize();
     
 }
 
