@@ -246,17 +246,17 @@ void TGeometryBuilder::DrawDFN(){
 //                    int entity_tag = dfn_bc_dim_tags[i][j].second;
 //                    double xmin, ymin, zmin, xmax, ymax, zmax;
 //                    gmsh::model::getBoundingBox(1, entity_tag, xmin, ymin, zmin, xmax, ymax, zmax);
-//                    /// internal boundary
-//                    bool is_internal_region_member_Q;
-//                    {
-//                        bool is_left_p_member_Q =  IsMemeberQ(Point(xmin,ymin),polygon_internal);
-//                        bool is_right_p_member_Q =  IsMemeberQ(Point(xmax,ymax),polygon_internal);
-//                        is_internal_region_member_Q = is_left_p_member_Q || is_right_p_member_Q;
-//                        if (is_internal_region_member_Q) {
-//                            m_fracture_tags_to_remove.insert(entity_tag);
-//                            dim_tags_to_remove.push_back(std::make_pair(1, entity_tag));
-//                        }
-//                    }
+////                    /// internal boundary
+////                    bool is_internal_region_member_Q;
+////                    {
+////                        bool is_left_p_member_Q =  IsMemeberQ(Point(xmin,ymin),polygon_internal);
+////                        bool is_right_p_member_Q =  IsMemeberQ(Point(xmax,ymax),polygon_internal);
+////                        is_internal_region_member_Q = is_left_p_member_Q || is_right_p_member_Q;
+////                        if (is_internal_region_member_Q) {
+////                            m_fracture_tags_to_remove.insert(entity_tag);
+////                            dim_tags_to_remove.push_back(std::make_pair(1, entity_tag));
+////                        }
+////                    }
 //                    
 //                    /// external boundary
 //                    {

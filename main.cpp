@@ -119,7 +119,7 @@ void Wellbore_2D_with_factures(){
     gmsh::model::add("boolean");
     gmsh::option::setNumber("Mesh.Algorithm", 6);
     
-    double r = 1.25;
+    double r = 2.25;
     double r_w = 0.127;
     
     gmsh::option::setNumber("Mesh.CharacteristicLengthMin", 0.1*r_w);
@@ -141,9 +141,9 @@ void Wellbore_2D_with_factures(){
     gmsh::model::occ::synchronize();
 
     /// Load DFN
-    int n_data = 4; // 10 fractures
+    int n_data = 8; // 10 fractures
 //    std::string file_name = "dfn.txt";
-    std::string file_name = "two_fracs.txt";
+    std::string file_name = "four_fracs.txt";
     geo_builder.LoadDiscreteFractureNetwork(file_name, n_data);
     
     /// Draws DFN
