@@ -167,8 +167,6 @@ void TGeometryBuilder::DrawBaseFractures(){
     gmsh::model::occ::synchronize();
 }
 
-#define new_fragmentation_Q
-
 void TGeometryBuilder::DrawDFN(){
     
     /// Construct the maps of internal and external boundary tree curve tags
@@ -361,64 +359,6 @@ void TGeometryBuilder::DrawDFN(){
         
     }
     
-#ifndef new_fragmentation_Q
-
-    
-    {
-
-        /// rebased m_base_fracture_curve_tags
-        m_base_fracture_curve_tags.clear();
-        for (auto chunk: m_fracture_list_tags) {
-            std::cout << std::endl << std::endl;
-            EntityList fracture_list(chunk.second);
-            std::vector<int> leaves = EntityList::getLeaves(&fracture_list);
-            for (auto l: leaves) {
-                bool is_not_member_Q = m_fracture_tags_to_remove.find(l) == m_fracture_tags_to_remove.end();
-                if (is_not_member_Q) {
-                    m_base_fracture_curve_tags.push_back(l);
-                }
-            }
-        }
-    }
-    
-
-    /// dfn and dfn fragmentation
-    std::pair<int, std::vector<int> > chunk_tag_sub_tag;
-    chunk_tag_sub_tag.second.resize(1);
-
-    std::map<int,std::vector<int>> fractures;
-    std::map<int,std::vector<int>> objects;
-    std::map<int,std::vector<int>> tools;
-    chunk_tag_sub_tag.second.resize(1);
-    for (auto f: m_base_fracture_curve_tags) {
-        chunk_tag_sub_tag.first = f;
-        chunk_tag_sub_tag.second[0] = f;
-        fractures.insert(chunk_tag_sub_tag);
-        objects.insert(chunk_tag_sub_tag);
-        tools.insert(chunk_tag_sub_tag);
-        m_fracture_curve_tags.insert(chunk_tag_sub_tag);
-    }
-
-    bool there_are_intersections_Q = true;
-    while (there_are_intersections_Q) {
-        there_are_intersections_Q = ComputeFracturesIntersections(objects, tools, fractures);
-    }
-
-    chunk_tag_sub_tag.second.resize(0);
-    /// Computing physical tag for fractures by group
-    std::map<int,std::vector<int>> fractures_to_micro;
-    for (auto f : m_fracture_curve_tags) {
-        /// compute micro fractures
-        chunk_tag_sub_tag = f;
-        chunk_tag_sub_tag.second = ComputeAssociatedMicroFractures(chunk_tag_sub_tag, fractures);
-        chunk_tag_sub_tag.first = f.first;
-        fractures_to_micro.insert(chunk_tag_sub_tag);
-
-    }
-    m_fracture_curve_tags = fractures_to_micro; /// updating the micro fractures
-    
-#else
-    
     /// rebased m_fracture_curve_tags
     m_fracture_curve_tags.clear();
     for (auto chunk: m_fracture_list_tags) {
@@ -428,7 +368,6 @@ void TGeometryBuilder::DrawDFN(){
         m_fracture_curve_tags[fracture_tag] = leaves;
     }
     
-#endif
     
 }
 
