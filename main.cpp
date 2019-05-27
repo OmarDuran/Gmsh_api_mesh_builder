@@ -24,6 +24,9 @@
 void Constructive_solid_geometry();
 
 /// Geometry that represents a 3D wellbore inside a irregular reservoir
+void Vertical_Wellbore_trajectory_3D();
+
+/// Geometry that represents a 3D wellbore inside a irregular reservoir
 void Wellbore_trajectory_3D();
 
 /// Geometry that represents a 2D wellbore inside a irregular reservoir with line fractures
@@ -83,7 +86,8 @@ int main()
 //    PointSearch_in_2D();
 //    return 0;
     
-    Wellbore_2D_with_factures();
+//    Wellbore_2D_with_factures();
+    Vertical_Wellbore_trajectory_3D();
 //    Wellbore_trajectory_3D();
 //    Constructive_solid_geometry();
     return 0;
@@ -210,7 +214,7 @@ void Wellbore_2D_with_factures(){
 
 void InsertTheElements(TPZGeoMesh * gmesh);
 
-void Wellbore_trajectory_3D(){
+void Vertical_Wellbore_trajectory_3D(){
     
     gmsh::initialize();
     gmsh::option::setNumber("General.Terminal", 1);
@@ -219,28 +223,57 @@ void Wellbore_trajectory_3D(){
     
     
     gmsh::option::setNumber("Mesh.Algorithm", 6);
-
     
+    std::vector<int> w_point_tag,s_point_tag,e_point_tag,n_point_tag;
+    std::vector<int> point_tags;
     {/// Functional but expensive
         
         /// wellbore radius
-        REAL r_wb = 15.0;
+        REAL r_wb = 0.1;
         REAL characteristic_length = 1.0*r_wb;
         
         gmsh::option::setNumber("Mesh.CharacteristicLengthMin", characteristic_length);
-        gmsh::option::setNumber("Mesh.CharacteristicLengthMax", 50.0);
+        gmsh::option::setNumber("Mesh.CharacteristicLengthMax", 10.0);
         
-        int n_data = 50;
-        std::string file_name = "producer_trajectory.txt";
+        std::string file_name = "vertical_producer_trajectory.txt";
+        int n_data = 11;
         std::vector<std::vector<double>> wb_trajectory = ReadWellTrajectory(file_name,n_data);
         TGmshWellboreBuilder wb_builder(r_wb,wb_trajectory);
+
         if(1){ // volume option
             wb_builder.SetCharacteristicLength(characteristic_length);
             gmsh::vectorpair wb_dim_tags = wb_builder.DrawWellboreByShell();
             
-            std::vector<double> x_min = {-250, -250., -50.};
-            std::vector<double> dx = {990, 638.413, 110.653};
+            std::vector<double> x_min = {-10, -10., -2.5};
+            std::vector<double> dx = {20, 20., 5.};
+            std::vector<double> x_max = {x_min[0] + dx[0], x_min[1] + dx[1],  x_min[2] + dx[2]};
             int box_tag = gmsh::model::occ::addBox(x_min[0],x_min[1],x_min[2], dx[0],dx[1],dx[2]);
+        
+
+            double w_p_x = x_min[0];
+            double w_p_y = 0.5*(x_min[1]+x_max[1]);
+            int W_point_tag = gmsh::model::occ::addPoint(w_p_x, w_p_y, 0.0);
+            w_point_tag.push_back(W_point_tag);
+            
+            double s_p_x = 0.5*(x_min[0]+x_max[0]);
+            double s_p_y = x_min[1];
+            int S_point_tag = gmsh::model::occ::addPoint(s_p_x, s_p_y, 0.0);
+            s_point_tag.push_back(S_point_tag);
+            
+            double e_p_x = x_max[0];
+            double e_p_y = 0.5*(x_min[1]+x_max[1]);
+            int E_point_tag = gmsh::model::occ::addPoint(e_p_x, e_p_y, 0.0);
+            e_point_tag.push_back(E_point_tag);
+            
+            double n_p_x = 0.5*(x_min[0]+x_max[0]);
+            double n_p_y = x_max[1];
+            int N_point_tag = gmsh::model::occ::addPoint(n_p_x, n_p_y, 0.0);
+            n_point_tag.push_back(N_point_tag);
+            
+            point_tags.push_back(W_point_tag);
+            point_tags.push_back(S_point_tag);
+            point_tags.push_back(E_point_tag);
+            point_tags.push_back(N_point_tag);
             
             std::vector<std::pair<int, int> > ov;
             std::vector<std::pair<int, int> > wellbore_volume;
@@ -270,6 +303,188 @@ void Wellbore_trajectory_3D(){
             gmsh::model::occ::cut({{3, box_tag}}, wellbore_reservoir_intersection, ov, ovv, tag, removeObject, removeTool);
         }
 
+    }
+    
+
+    
+    gmsh::model::occ::synchronize();
+    gmsh::model::occ::removeAllDuplicates();
+    
+    /// physiscal taggging
+    // Get all elementary entities in the model
+    std::vector<std::pair<int, int> > entities_3d;
+    gmsh::model::getEntities(entities_3d,3);
+    int n_tags_3d = entities_3d.size();
+    std::vector<int> reservoir_3d(n_tags_3d);
+    int c=0;
+    for (auto i: entities_3d) {
+        reservoir_3d[c] = i.second;
+        c++;
+    }
+    
+    /// Physical for the reservoir
+    int physical_tag_3d;
+    physical_tag_3d = gmsh::model::addPhysicalGroup(3, reservoir_3d);
+    std::string reservoir("reservoir");
+    gmsh::model::setPhysicalName(3, reservoir_3d[0], reservoir);
+    
+    /// Computing the reservoir boundaries
+    gmsh::vectorpair bc_dim_tags;
+    bool combined = false;
+    bool oriented = false;
+    bool recursive = false;
+    gmsh::model::getBoundary(entities_3d, bc_dim_tags, combined, oriented, recursive);
+    
+    c = 0; //  The first 6 bcs are the external ones
+    std::vector<int> bc_reservoir_external_tags(6);
+    for (int i = 0;  i < 6; i++) {
+        bc_reservoir_external_tags[c] = bc_dim_tags[i].second;
+        c++;
+    }
+    std::vector<int> bc_W(1),bc_S(1),bc_T(1),bc_N(1),bc_B(1),bc_E(1);
+    bc_W[0] = bc_reservoir_external_tags[0]; // W -> 0
+    gmsh::model::addPhysicalGroup(2, bc_W);
+    gmsh::model::setPhysicalName(2, 2, "BCWest");
+    
+    bc_S[0] = bc_reservoir_external_tags[1]; // S -> 1
+    gmsh::model::addPhysicalGroup(2, bc_S);
+    gmsh::model::setPhysicalName(2, 3, "BCSouth");
+    
+    bc_T[0] = bc_reservoir_external_tags[2]; // T -> 2
+    gmsh::model::addPhysicalGroup(2, bc_T);
+    gmsh::model::setPhysicalName(2, 4, "BCTop");
+    
+    bc_N[0] = bc_reservoir_external_tags[3]; // N -> 3
+    gmsh::model::addPhysicalGroup(2, bc_N);
+    gmsh::model::setPhysicalName(2, 5, "BCNorth");
+    
+    bc_B[0] = bc_reservoir_external_tags[4]; // B -> 4
+    gmsh::model::addPhysicalGroup(2, bc_B);
+    gmsh::model::setPhysicalName(2, 6, "BCBottom");
+    
+    bc_E[0] = bc_reservoir_external_tags[5]; // E -> 5
+    gmsh::model::addPhysicalGroup(2, bc_E);
+    gmsh::model::setPhysicalName(2, 7, "BCEast");
+    
+    
+    gmsh::model::mesh::embed(0,w_point_tag,2,bc_W[0]);
+    gmsh::model::mesh::embed(0,e_point_tag,2,bc_E[0]);
+    gmsh::model::mesh::embed(0,s_point_tag,2,bc_S[0]);
+    gmsh::model::mesh::embed(0,n_point_tag,2,bc_N[0]);
+    
+    int n_bc = bc_dim_tags.size();
+    
+    //  Cased Hole section
+    int n_cased_bc = 0;
+    
+    //  Open Hole section
+    int n_open_bc = n_bc - n_cased_bc - 6;
+    c = 0;
+    std::vector<int> bc_open_wellbore_tags(n_open_bc);
+    for (int i = n_cased_bc + 6;  i < n_bc; i++) {
+        bc_open_wellbore_tags[c] = bc_dim_tags[i].second;
+        c++;
+    }
+    gmsh::model::addPhysicalGroup(2, bc_open_wellbore_tags);
+    gmsh::model::setPhysicalName(2, 8, "BCOpenHole");
+    
+    
+    /// West point
+    gmsh::model::addPhysicalGroup(0, w_point_tag);
+    gmsh::model::setPhysicalName(0, 9, "BCWestPoint");
+    
+    /// South point
+    gmsh::model::addPhysicalGroup(0, s_point_tag);
+    gmsh::model::setPhysicalName(0, 10, "BCSouthPoint");
+    
+    /// East point
+    gmsh::model::addPhysicalGroup(0, e_point_tag);
+    gmsh::model::setPhysicalName(0, 11, "BCEastPoint");
+    
+    /// North point
+    gmsh::model::addPhysicalGroup(0, n_point_tag);
+    gmsh::model::setPhysicalName(0, 12, "BCNorthPoint");
+    
+    /// Meshing directives
+    gmsh::model::mesh::generate(3);
+    gmsh::write("vertical_wellbore_3D_5_inches_geo.msh");
+    
+    std::string geometry_file = "vertical_wellbore_3D_5_inches_geo.msh";
+    TPZGmshReader Geometry;
+    REAL l = 1.0;
+    Geometry.SetCharacteristiclength(l);
+    Geometry.SetFormatVersion("4.1");
+    TPZGeoMesh * gmesh = Geometry.GeometricGmshMesh(geometry_file);
+    Geometry.PrintPartitionSummary(std::cout);
+    std::string vtk_file = "vertical_wellbore_geo";
+    TPZGeoMeshBluider::PrintGeometry(gmesh,vtk_file);
+    
+    gmsh::finalize();
+    
+}
+
+void Wellbore_trajectory_3D(){
+    
+    gmsh::initialize();
+    gmsh::option::setNumber("General.Terminal", 1);
+    
+    gmsh::model::add("boolean");
+    
+    
+    gmsh::option::setNumber("Mesh.Algorithm", 6);
+    
+    
+    {/// Functional but expensive
+        
+        /// wellbore radius
+        REAL r_wb = 0.1;
+        REAL characteristic_length = 1.0*r_wb;
+        
+        gmsh::option::setNumber("Mesh.CharacteristicLengthMin", characteristic_length);
+        gmsh::option::setNumber("Mesh.CharacteristicLengthMax", 10.0);
+        
+        //        int n_data = 50;
+        //        std::string file_name = "producer_trajectory.txt";
+        std::string file_name = "vertical_producer_trajectory.txt";
+        int n_data = 11;
+        std::vector<std::vector<double>> wb_trajectory = ReadWellTrajectory(file_name,n_data);
+        TGmshWellboreBuilder wb_builder(r_wb,wb_trajectory);
+        if(1){ // volume option
+            wb_builder.SetCharacteristicLength(characteristic_length);
+            gmsh::vectorpair wb_dim_tags = wb_builder.DrawWellboreByShell();
+            
+            std::vector<double> x_min = {-10, -10., -2.5};
+            std::vector<double> dx = {20, 20., 5.};
+            int box_tag = gmsh::model::occ::addBox(x_min[0],x_min[1],x_min[2], dx[0],dx[1],dx[2]);
+            
+            std::vector<std::pair<int, int> > ov;
+            std::vector<std::pair<int, int> > wellbore_volume;
+            std::vector<std::vector<std::pair<int, int> > > ovv;
+            int n_volumes = wb_dim_tags.size();
+            std::vector<std::pair<int, int> > sector_volume;
+            sector_volume.push_back(wb_dim_tags[0]);
+            for (int i =1 ; i < n_volumes; i++) {
+                std::vector<std::pair<int, int> > next_sector_volume;
+                next_sector_volume.push_back(wb_dim_tags[i]);
+                gmsh::model::occ::fuse(sector_volume, next_sector_volume, wellbore_volume, ovv);
+                sector_volume = wellbore_volume;
+            }
+            if (n_volumes == 1) {
+                wellbore_volume = wb_dim_tags;
+            }
+            
+            int tag = 0;
+            bool removeObject = true;
+            bool removeTool = false;
+            /// computing wellbore - reservoir intersection volume and keep the tool (the reservoir volume)
+            std::vector<std::pair<int, int> > wellbore_reservoir_intersection;
+            gmsh::model::occ::intersect(wellbore_volume,{{3, box_tag}}, wellbore_reservoir_intersection, ovv, tag, removeObject, removeTool);
+            removeObject = true;
+            removeTool = true;
+            /// computing holled reservoir by cutting wellbore - reservoir intersection volume and delete the tool.
+            gmsh::model::occ::cut({{3, box_tag}}, wellbore_reservoir_intersection, ov, ovv, tag, removeObject, removeTool);
+        }
+        
     }
     
     gmsh::model::occ::synchronize();
@@ -333,18 +548,18 @@ void Wellbore_trajectory_3D(){
     int n_bc = bc_dim_tags.size();
     
     //  Cased Hole section
-    int n_cased_bc = 28;
-    c = 0;
-    std::vector<int> bc_cased_wellbore_tags(n_cased_bc);
-    for (int i = 6;  i < n_cased_bc + 6; i++) {
-        bc_cased_wellbore_tags[c] = bc_dim_tags[i].second;
-        c++;
-    }
-    gmsh::model::addPhysicalGroup(2, bc_cased_wellbore_tags);
-    gmsh::model::setPhysicalName(2, 8, "BCCasedHole");
+    int n_cased_bc = 0;
+    //    c = 0;
+    //    std::vector<int> bc_cased_wellbore_tags(n_cased_bc);
+    //    for (int i = 6;  i < n_cased_bc + 6; i++) {
+    //        bc_cased_wellbore_tags[c] = bc_dim_tags[i].second;
+    //        c++;
+    //    }
+    //    gmsh::model::addPhysicalGroup(2, bc_cased_wellbore_tags);
+    //    gmsh::model::setPhysicalName(2, 8, "BCCasedHole");
     
     //  Open Hole section
-    int n_open_bc = n_bc - n_cased_bc - 6 - 1;
+    int n_open_bc = n_bc - n_cased_bc - 6;
     c = 0;
     std::vector<int> bc_open_wellbore_tags(n_open_bc);
     for (int i = n_cased_bc + 6;  i < n_bc; i++) {
@@ -352,55 +567,56 @@ void Wellbore_trajectory_3D(){
         c++;
     }
     gmsh::model::addPhysicalGroup(2, bc_open_wellbore_tags);
-    gmsh::model::setPhysicalName(2, 9, "BCOpenHole");
+    gmsh::model::setPhysicalName(2, 8, "BCOpenHole");
     
     //  The wellbore lid
-    int n_lid_bc = n_bc - n_open_bc - n_cased_bc - 6;
-    c = 0;
-    std::vector<int> bc_lid_wellbore_tags(n_lid_bc);
-    for (int i = n_open_bc + n_cased_bc + 6;  i < n_bc; i++) {
-        bc_lid_wellbore_tags[c] = bc_dim_tags[i].second;
-        c++;
-    }
-    gmsh::model::addPhysicalGroup(2, bc_lid_wellbore_tags);
-    gmsh::model::setPhysicalName(2, 10, "BCWellboreLid");
+    //    int n_lid_bc = n_bc - n_open_bc - n_cased_bc - 6;
+    //    c = 0;
+    //    std::vector<int> bc_lid_wellbore_tags(n_lid_bc);
+    //    for (int i = n_open_bc + n_cased_bc + 6;  i < n_bc; i++) {
+    //        bc_lid_wellbore_tags[c] = bc_dim_tags[i].second;
+    //        c++;
+    //    }
+    //    gmsh::model::addPhysicalGroup(2, bc_lid_wellbore_tags);
+    //    gmsh::model::setPhysicalName(2, 10, "BCWellboreLid");
     
     /// Meshing directives
-    gmsh::model::mesh::generate(3);
-//    gmsh::model::mesh::refine();
     //    gmsh::model::mesh::setOrder(2);
-    //gmsh::model::mesh::partition(4)
-    gmsh::write("wellbore_geo.msh");
+    gmsh::model::mesh::generate(3);
+    //    gmsh::model::mesh::refine();
     
-    std::string geometry_file = "wellbore_geo.msh";
+    //gmsh::model::mesh::partition(4)
+    gmsh::write("vertical_wellbore_3D_5_inches_geo.msh");
+    
+    std::string geometry_file = "vertical_wellbore_3D_5_inches_geo.msh";
     TPZGmshReader Geometry;
     REAL l = 1.0;
     Geometry.SetCharacteristiclength(l);
-    Geometry.SetFormatVersion("4.0");
+    Geometry.SetFormatVersion("4.1");
     TPZGeoMesh * gmesh = Geometry.GeometricGmshMesh(geometry_file);
     Geometry.PrintPartitionSummary(std::cout);
     std::string vtk_file = "wellbore_geo";
     TPZGeoMeshBluider::PrintGeometry(gmesh,vtk_file);
     
-//    /// Building the geomesh object
-//    TPZGeoMesh * gmesh = new TPZGeoMesh;
-//    int mesh_dimension  = gmsh::model::getDimension();
-//    gmesh->SetDimension(mesh_dimension);
-//
-//    //// Gathering required information for constuction of a TPZGeoMesh object
-//    {
-//        std::vector<int> node_identifiers;
-//        std::vector<double> coord;
-//        std::vector<double> parametricCoord;
-//        gmsh::model::mesh::getNodes(node_identifiers, coord, parametricCoord);
-//        TPZGeoMeshBluider::InsertNodes(gmesh, node_identifiers, coord);
-//        InsertTheElements(gmesh);
-//    }
-//
-//
-//    gmesh->BuildConnectivity();
-//    std::string name = "wellbore";
-//    TPZGeoMeshBluider::PrintGeometry(gmesh,name);
+    //    /// Building the geomesh object
+    //    TPZGeoMesh * gmesh = new TPZGeoMesh;
+    //    int mesh_dimension  = gmsh::model::getDimension();
+    //    gmesh->SetDimension(mesh_dimension);
+    //
+    //    //// Gathering required information for constuction of a TPZGeoMesh object
+    //    {
+    //        std::vector<int> node_identifiers;
+    //        std::vector<double> coord;
+    //        std::vector<double> parametricCoord;
+    //        gmsh::model::mesh::getNodes(node_identifiers, coord, parametricCoord);
+    //        TPZGeoMeshBluider::InsertNodes(gmesh, node_identifiers, coord);
+    //        InsertTheElements(gmesh);
+    //    }
+    //
+    //
+    //    gmesh->BuildConnectivity();
+    //    std::string name = "wellbore";
+    //    TPZGeoMeshBluider::PrintGeometry(gmesh,name);
     
     gmsh::finalize();
     

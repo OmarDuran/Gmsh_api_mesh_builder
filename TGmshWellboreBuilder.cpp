@@ -301,8 +301,14 @@ gmsh::vectorpair TGmshWellboreBuilder::CopyRingBase(){
 void TGmshWellboreBuilder::RotateRing(gmsh::vectorpair ring_dim_tags, std::vector<double> & axis){
     std::vector<double> z_unit = {0,0,1};
     double omega = angle(z_unit, axis);
-    std::vector<double> dir = cross(z_unit, axis);
-    gmsh::model::occ::rotate(ring_dim_tags, 0, 0, 0, dir[0], dir[1], dir[2], omega);
+    
+    if (fabs(omega) < 1.0e-10) {
+        gmsh::model::occ::rotate(ring_dim_tags, 0, 0, 0, z_unit[0], z_unit[1], z_unit[2], omega); /// vertical section case
+    }else{
+        std::vector<double> dir = cross(z_unit, axis);
+        gmsh::model::occ::rotate(ring_dim_tags, 0, 0, 0, dir[0], dir[1], dir[2], omega);
+    }
+    
 }
 
 void TGmshWellboreBuilder::TranslateRing(gmsh::vectorpair ring_dim_tags, std::vector<double> & point){
