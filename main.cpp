@@ -230,10 +230,10 @@ void Vertical_Wellbore_trajectory_3D(){
         
         /// wellbore radius
         REAL r_wb = 0.1;
-        REAL characteristic_length = 1.0*r_wb;
+        REAL characteristic_length = 0.3333*r_wb;
         
         gmsh::option::setNumber("Mesh.CharacteristicLengthMin", characteristic_length);
-        gmsh::option::setNumber("Mesh.CharacteristicLengthMax", 10.0);
+        gmsh::option::setNumber("Mesh.CharacteristicLengthMax", 1.4);
         
         std::string file_name = "vertical_producer_trajectory.txt";
         int n_data = 11;
@@ -407,9 +407,10 @@ void Vertical_Wellbore_trajectory_3D(){
     
     /// Meshing directives
     gmsh::model::mesh::generate(3);
-    gmsh::write("vertical_wellbore_3D_5_inches_geo.msh");
+    std::string mesh_file = "vertical_wellbore_3D_5_inches_fine_geo.msh";
+    gmsh::write(mesh_file.c_str());
     
-    std::string geometry_file = "vertical_wellbore_3D_5_inches_geo.msh";
+    std::string geometry_file = mesh_file;
     TPZGmshReader Geometry;
     REAL l = 1.0;
     Geometry.SetCharacteristiclength(l);
